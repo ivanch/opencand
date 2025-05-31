@@ -2,6 +2,7 @@ DROP TABLE IF EXISTS bem_candidato CASCADE;
 DROP TABLE IF EXISTS candidato_mapping CASCADE;
 DROP TABLE IF EXISTS rede_social CASCADE;
 DROP TABLE IF EXISTS candidato CASCADE;
+DROP TABLE IF EXISTS partido CASCADE;
 
 CREATE TABLE candidato (
     idcandidato UUID NOT NULL PRIMARY KEY,
@@ -27,6 +28,7 @@ CREATE TABLE candidato_mapping (
     siglauf VARCHAR(2),
     nomeue VARCHAR(100),
     cargo VARCHAR(50),
+    sgpartido VARCHAR(10),
     nrcandidato VARCHAR(20),
     resultado VARCHAR(50),
     CONSTRAINT pk_candidato_mapping PRIMARY KEY (idcandidato, ano, siglauf, nomeue, cargo, nrcandidato, resultado),
@@ -37,6 +39,7 @@ CREATE INDEX idx_candidato_mapping_nome ON candidato_mapping (nome);
 CREATE INDEX idx_candidato_mapping_ano ON candidato_mapping (ano);
 CREATE INDEX idx_candidato_mapping_sqcandidato ON candidato_mapping (sqcandidato);
 
+---- Table for storing assets of candidates
 CREATE TABLE bem_candidato (
     idcandidato UUID NOT NULL,
     ano INT NOT NULL,
@@ -50,6 +53,7 @@ ALTER TABLE bem_candidato ADD CONSTRAINT pk_bem_candidato PRIMARY KEY (idcandida
 CREATE INDEX idx_bem_candidato_idcandidato ON bem_candidato (idcandidato);
 CREATE INDEX idx_bem_candidato_valor ON bem_candidato (valor);
 
+---- Table for storing social media links of candidates
 CREATE TABLE rede_social (
     idcandidato UUID NOT NULL,
     rede VARCHAR(50) NOT NULL,
@@ -60,3 +64,12 @@ CREATE TABLE rede_social (
     CONSTRAINT fk_rede_social_candidato FOREIGN KEY (idcandidato) REFERENCES candidato(idcandidato) ON DELETE CASCADE ON UPDATE CASCADE
 );
 CREATE INDEX idx_rede_social_idcandidato ON rede_social (idcandidato);
+
+---- Table for storing party information
+CREATE TABLE partido (
+    sigla VARCHAR(10) NOT NULL PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    numero INT NOT NULL
+);
+CREATE INDEX idx_partido_nome ON partido (nome);
+CREATE INDEX idx_partido_numero ON partido (numero);

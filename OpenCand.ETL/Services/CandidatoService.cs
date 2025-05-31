@@ -1,4 +1,5 @@
 ﻿using OpenCand.Core.Models;
+using OpenCand.ETL.Repository;
 using OpenCand.Repository;
 
 namespace OpenCand.Services
@@ -6,10 +7,12 @@ namespace OpenCand.Services
     public class CandidatoService
     {
         private readonly CandidatoRepository candidatoRepository;
+        private readonly PartidoRepository partidoRepository;
 
-        public CandidatoService(CandidatoRepository candidatoRepository)
+        public CandidatoService(CandidatoRepository candidatoRepository, PartidoRepository partidoRepository)
         {
             this.candidatoRepository = candidatoRepository;
+            this.partidoRepository = partidoRepository;
         }
 
         public async Task AddCandidatoAsync(Candidato candidato)
@@ -26,11 +29,23 @@ namespace OpenCand.Services
 
             var candidatoMapping = candidato.Eleicoes.First();
 
+            // Add partido data
+            if (candidatoMapping.Partido != null)
+            {
+                await partidoRepository.AddPartidoAsync(candidatoMapping.Partido);
+            }
+
             List<CandidatoMapping>? mappings = null;
             CandidatoMapping? existingMapping = null;
             if (candidato.Cpf == null || candidato.Cpf.Length != 11)
             {
-                mappings = await candidatoRepository.GetCandidatoMappingByNome(candidato.Nome);
+                // If CPF is not provided or invalid, we STRICTLY search by name and other properties
+                mappings = await candidatoRepository.GetCandidatoMappingByNome(candidato.Nome,
+                                                                               candidato.SqCandidato,
+                                                                               candidatoMapping.Ano,
+                                                                               candidatoMapping.SiglaUF,
+                                                                               candidatoMapping.NomeUE,
+                                                                               candidatoMapping.NrCandidato);
             }
             else
             {

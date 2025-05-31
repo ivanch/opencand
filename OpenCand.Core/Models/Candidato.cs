@@ -1,3 +1,5 @@
+using System.IO.Pipes;
+
 namespace OpenCand.Core.Models
 {
     public class Candidato
@@ -41,6 +43,9 @@ namespace OpenCand.Core.Models
         public string Cargo { get; set; }
         public string NrCandidato { get; set; }
         public string Resultado { get; set; }
+        public string Sgpartido { get; set; }
+
+        public Partido? Partido { get; set; } // Nullable to allow for candidates without a party
     }
 
     public class RedeSocial

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenCand.Config;
+using OpenCand.ETL.Repository;
 using OpenCand.Parser;
 using OpenCand.Parser.Services;
 using OpenCand.Repository;
@@ -64,6 +65,7 @@ namespace OpenCand
                     services.AddTransient<CandidatoRepository>();
                     services.AddTransient<BemCandidatoRepository>();
                     services.AddTransient<RedeSocialRepository>();
+                    services.AddTransient<PartidoRepository>();
                     services.AddTransient<CsvFixerService>();
                 });
     }

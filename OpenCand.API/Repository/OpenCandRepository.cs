@@ -21,7 +21,7 @@ namespace OpenCand.API.Repository
                         (SELECT COUNT(*) FROM bem_candidato) AS TotalBemCandidatos,
                         (SELECT SUM(valor) FROM bem_candidato) AS TotalValorBemCandidatos,
                         (SELECT COUNT(*) FROM rede_social) AS TotalRedesSociais,
-                        (SELECT COUNT(DISTINCT ano) FROM bem_candidato) AS TotalEleicoes;");
+                        (SELECT COUNT(DISTINCT ano) FROM candidato_mapping) AS TotalEleicoes;");
                 return stats ?? new OpenCandStats();
             }
         }

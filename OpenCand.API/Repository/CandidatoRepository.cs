@@ -58,6 +58,17 @@ namespace OpenCand.Repository
             }
         }
 
+        public async Task<Partido?> GetPartidoBySigla(string sigla)
+        {
+            using (var connection = new NpgsqlConnection(ConnectionString))
+            {
+                var query = @"
+                    SELECT * FROM partido
+                    WHERE sigla = @sigla";
+                return await connection.QueryFirstOrDefaultAsync<Partido>(query, new { sigla });
+            }
+        }
+
         public async Task<List<RedeSocial>?> GetCandidatoRedeSocialById(Guid idcandidato)
         {
             using (var connection = new NpgsqlConnection(ConnectionString))

@@ -50,6 +50,11 @@ namespace OpenCand.API.Services
             var result = await candidatoRepository.GetCandidatoAsync(idcandidato);
             var eleicoes = await candidatoRepository.GetCandidatoMappingById(idcandidato);
 
+            foreach (var eleicao in eleicoes)
+            {
+                eleicao.Partido = await candidatoRepository.GetPartidoBySigla(eleicao.Sgpartido);
+            }
+
             if (result == null)
             {
                 throw new KeyNotFoundException($"Candidato with ID {idcandidato} not found.");

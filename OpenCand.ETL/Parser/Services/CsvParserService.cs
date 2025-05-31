@@ -63,7 +63,7 @@ namespace OpenCand.Parser.Services
                 using var csv = new CsvReader(reader, parserConfig);
                 var po = new ParallelOptions
                 {
-                    MaxDegreeOfParallelism = 100
+                    MaxDegreeOfParallelism = 25
                 };
 
                 csv.Context.RegisterClassMap<CandidatoMap>();
@@ -111,6 +111,12 @@ namespace OpenCand.Parser.Services
                                     Cargo = record.DescricaoCargo,
                                     NrCandidato = record.NumeroCandidato,
                                     Resultado = record.SituacaoTurno,
+                                    Partido = new Partido
+                                    {
+                                        Sigla = record.SiglaPartido,
+                                        Nome = record.NomePartido,
+                                        Numero = record.NumeroPartido,
+                                    }
                                 }
                             }
                         };
