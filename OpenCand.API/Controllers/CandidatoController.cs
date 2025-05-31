@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.VisualBasic;
 using OpenCand.API.Model;
 using OpenCand.API.Services;
 using OpenCand.Core.Models;
@@ -36,6 +37,15 @@ namespace OpenCand.API.Controllers
         public async Task<RedeSocialResult> GetCandidatoRedeSocialById([FromRoute] Guid id)
         {
             return await openCandService.GetCandidatoRedeSocialById(id);
+        }
+
+        [HttpGet("{id}/reveal-cpf")]
+        public async Task<CpfRevealResult> GetCandidatoCpfById([FromRoute] Guid id)
+        {
+            var rnd = new Random();
+            var randomWait = rnd.Next(1000, 3000);
+            await Task.Delay(randomWait);
+            return await openCandService.GetCandidatoCpfById(id);
         }
     }
 }

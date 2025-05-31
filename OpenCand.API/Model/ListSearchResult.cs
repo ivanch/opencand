@@ -16,4 +16,9 @@ namespace OpenCand.API.Model
     {
         public List<RedeSocial> RedesSociais { get; set; }
     }
+
+    public class CpfRevealResult
+    {
+        public string Cpf { get; set; }
+    }
 }

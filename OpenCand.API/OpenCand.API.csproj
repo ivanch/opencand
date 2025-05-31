@@ -25,4 +25,10 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="fotos_cand.zip" />
+    <Content Remove="fotos_cand" />
+  </ItemGroup>
+
+
 </Project>

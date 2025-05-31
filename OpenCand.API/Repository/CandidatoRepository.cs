@@ -36,6 +36,17 @@ namespace OpenCand.Repository
             }
         }
 
+        public async Task<string?> GetCandidatoCpfAsync(Guid idcandidato)
+        {
+            using (var connection = new NpgsqlConnection(ConnectionString))
+            {
+                return await connection.QueryFirstOrDefaultAsync<string>(@"
+                    SELECT cpf FROM candidato
+                    WHERE idcandidato = @idcandidato;",
+                    new { idcandidato });
+            }
+        }
+
         public async Task<List<CandidatoMapping>?> GetCandidatoMappingById(Guid idcandidato)
         {
             using (var connection = new NpgsqlConnection(ConnectionString))

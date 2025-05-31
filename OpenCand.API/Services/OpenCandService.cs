@@ -94,5 +94,19 @@ namespace OpenCand.API.Services
                 RedesSociais = result.OrderByDescending(r => r.Ano).ToList()
             };
         }
+
+        public async Task<CpfRevealResult> GetCandidatoCpfById(Guid idcandidato)
+        {
+            var result = await candidatoRepository.GetCandidatoCpfAsync(idcandidato);
+            if (result == null)
+            {
+                return new CpfRevealResult();
+            }
+
+            return new CpfRevealResult()
+            {
+                Cpf = result
+            };
+        }
     }
 }
