@@ -1,0 +1,64 @@
+name: API Build and Deploy
+
+on:
+  workflow_dispatch: {}
+
+env:
+  REGISTRY_HOST: git.ivanch.me
+  IMAGE_API: ${{ env.REGISTRY_HOST }}/ivanch/opencand.api
+  # ───────────────────────────────────────────────────────────────────────────
+  DEPLOY_USER: ${{ secrets.LIVE_USERNAME }}
+  DEPLOY_HOST: ${{ secrets.LIVE_HOST }}
+  DEPLOY_PATH: ${{ secrets.LIVE_PROJECT_DIR }}
+
+jobs:
+  build_and_deploy_api:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Log in to Container Registry
+        run: |
+          echo "${{ secrets.REGISTRY_PASSWORD }}" \
+            | docker login "${{ env.REGISTRY_HOST }}" \
+                -u "${{ secrets.REGISTRY_USERNAME }}" \
+                --password-stdin
+
+      - name: Build and Push API Image
+        run: |
+          TAG=latest
+
+          docker build \
+            -t "${{ env.IMAGE_API }}:${TAG}" \
+            -f OpenCand.API.dockerfile \
+            .
+
+          docker push "${{ env.IMAGE_API }}:${TAG}"
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.LIVE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          # Add the host to known_hosts so SSH does not prompt
+          ssh-keyscan -H "${{ env.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy to Production Server
+        run: |
+          TAG=latest
+
+          ssh "${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}" << 'EOF'
+            cd "${{ env.DEPLOY_PATH }}"
+
+            # Replace the “image:” line for the frontend service
+            # sed -i \
+            #   "s|image: .*/frontend:.*|image: ${{ env.IMAGE_FRONTEND }}:${TAG}|g" \
+            #   docker-compose.yml
+
+            # Pull only the new frontend image, then restart that service
+            docker compose pull api
+            docker compose up api -d
+          EOF

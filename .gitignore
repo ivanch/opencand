@@ -1,0 +1,15 @@
+sample*
+.vs
+.vscode
+**/bin
+**/obj
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.sln.ide
+*.sln.ide.*
+data
+appsettings.Development.json
+
+docker-compose.yaml

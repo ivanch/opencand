@@ -1,0 +1,68 @@
+using Microsoft.Extensions.FileProviders;
+using OpenCand.API.Config;
+using OpenCand.API.Repository;
+using OpenCand.API.Services;
+using OpenCand.Repository;
+
+namespace OpenCand.API
+{
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            var builder = WebApplication.CreateBuilder(args);
+
+            if (string.IsNullOrEmpty(Environment.ProcessPath))
+            {
+                throw new InvalidOperationException("Environment.ProcessPath is not set. Ensure the application is running in a valid environment.");
+            }
+
+            // Add services to the container.
+            builder.Services.AddControllers();
+
+            SetupServices(builder);
+
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
+
+            var app = builder.Build();
+
+            // Configure the HTTP request pipeline.
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI();
+            }
+
+            var workingDir = Path.GetDirectoryName(Environment.ProcessPath);
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(Path.Combine(workingDir, "fotos_cand")),
+                RequestPath = "/assets/fotos"
+            });
+
+            app.UseHttpsRedirection();
+
+            app.UseAuthorization();
+
+            app.MapControllers();
+
+            app.UseCors(x => x.AllowAnyMethod()
+                              .AllowAnyHeader()
+                              .SetIsOriginAllowed(origin => true) // allow any origin
+                              .AllowCredentials()); // allow credentials
+
+
+            app.Run();
+        }
+
+        private static void SetupServices(WebApplicationBuilder builder)
+        {
+            builder.Services.Configure<FotosSettings>(builder.Configuration.GetSection("FotosSettings"));
+            builder.Services.AddScoped<OpenCandRepository>();
+            builder.Services.AddScoped<CandidatoRepository>();
+            builder.Services.AddScoped<BemCandidatoRepository>();
+            builder.Services.AddScoped<OpenCandService>();
+        }
+    }
+}

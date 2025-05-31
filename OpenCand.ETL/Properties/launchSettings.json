@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "OpenCand": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
