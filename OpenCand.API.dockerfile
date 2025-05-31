@@ -4,7 +4,7 @@ WORKDIR /src
 
 # Copy only the solution and project files first, restore, then copy the rest
 COPY ./OpenCand.sln ./
-COPY ./OpenCand.ETL/OpenCand.API.csproj ./OpenCand.API/
+COPY ./OpenCand.API/OpenCand.API.csproj ./OpenCand.API/
 COPY ./OpenCand.Core/OpenCand.Core.csproj ./OpenCand.Core/
 
 RUN dotnet restore ./OpenCand.API/OpenCand.API.csproj
