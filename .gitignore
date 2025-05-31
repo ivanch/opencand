@@ -12,4 +12,7 @@ sample*
 data
 appsettings.Development.json
 
+fotos_cand
+*.zip
+
 docker-compose.yaml
