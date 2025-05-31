@@ -17,7 +17,7 @@ WORKDIR /src/OpenCand.API
 RUN dotnet publish -c Release -o /app/publish
 
 # ─── Stage 2: Runtime ─────────────────────────────────────────────────────
-FROM mcr.microsoft.com/dotnet/runtime:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
