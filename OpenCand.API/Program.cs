@@ -12,11 +12,6 @@ namespace OpenCand.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            if (string.IsNullOrEmpty(Environment.ProcessPath))
-            {
-                throw new InvalidOperationException("Environment.ProcessPath is not set. Ensure the application is running in a valid environment.");
-            }
-
             // Add services to the container.
             builder.Services.AddControllers();
 
@@ -34,7 +29,7 @@ namespace OpenCand.API
                 app.UseSwaggerUI();
             }
 
-            var workingDir = Path.GetDirectoryName(Environment.ProcessPath);
+            var workingDir = Directory.GetCurrentDirectory();
             app.UseStaticFiles(new StaticFileOptions
             {
                 FileProvider = new PhysicalFileProvider(Path.Combine(workingDir, "fotos_cand")),
