@@ -1,0 +1,33 @@
+name: API and ETL Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_etl:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Build ETL Image
+        run: |
+          docker build \
+            -f OpenCand.ETL.dockerfile \
+            .
+        
+  build_api:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Build API Image
+        run: |
+          docker build \
+            -f OpenCand.API.dockerfile \
+            .
