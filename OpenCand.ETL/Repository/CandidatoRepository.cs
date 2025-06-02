@@ -16,8 +16,8 @@ namespace OpenCand.Repository
             using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(@"
-                    INSERT INTO candidato (idcandidato, cpf, nome, datanascimento, email, sexo, estadocivil, escolaridade, ocupacao)
-                    VALUES (@idcandidato, @cpf, @nome, @datanascimento, @email, @sexo, @estadocivil, @escolaridade, @ocupacao)
+                    INSERT INTO candidato (idcandidato, cpf, nome, apelido, datanascimento, email, sexo, estadocivil, escolaridade, ocupacao)
+                    VALUES (@idcandidato, @cpf, @nome, @apelido, @datanascimento, @email, @sexo, @estadocivil, @escolaridade, @ocupacao)
                     ON CONFLICT (idcandidato) DO UPDATE SET
                         cpf = EXCLUDED.cpf,
                         nome = EXCLUDED.nome,
@@ -26,12 +26,14 @@ namespace OpenCand.Repository
                         sexo = EXCLUDED.sexo,
                         estadocivil = EXCLUDED.estadocivil,
                         escolaridade = EXCLUDED.escolaridade,
-                        ocupacao = EXCLUDED.ocupacao;",
+                        ocupacao = EXCLUDED.ocupacao,
+                        apelido = EXCLUDED.apelido;",
                     new
                     {
                         idcandidato = candidato.IdCandidato,
                         cpf = candidato.Cpf,
                         nome = candidato.Nome,
+                        apelido = candidato.Apelido,
                         datanascimento = candidato.DataNascimento,
                         email = candidato.Email,
                         sexo = candidato.Sexo,
@@ -47,13 +49,14 @@ namespace OpenCand.Repository
             using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(@"
-                    INSERT INTO candidato_mapping (idcandidato, cpf, nome, sqcandidato, ano, tipoeleicao, siglauf, nomeue, cargo, nrcandidato, sgpartido, resultado)
-                    VALUES (@idcandidato, @cpf, @nome, @sqcandidato, @ano, @tipoeleicao, @siglauf, @nomeue, @cargo, @nrcandidato, @sgpartido, @resultado);",
+                    INSERT INTO candidato_mapping (idcandidato, cpf, nome, apelido, sqcandidato, ano, tipoeleicao, siglauf, nomeue, cargo, nrcandidato, sgpartido, resultado)
+                    VALUES (@idcandidato, @cpf, @nome, @apelido, @sqcandidato, @ano, @tipoeleicao, @siglauf, @nomeue, @cargo, @nrcandidato, @sgpartido, @resultado);",
                     new
                     {
                         idcandidato = candidatoMapping.IdCandidato,
                         cpf = candidatoMapping.Cpf,
                         nome = candidatoMapping.Nome,
+                        apelido = candidatoMapping.Apelido,
                         sqcandidato = candidatoMapping.SqCandidato,
                         ano = candidatoMapping.Ano,
                         tipoeleicao = candidatoMapping.TipoEleicao,

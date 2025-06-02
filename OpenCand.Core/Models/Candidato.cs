@@ -12,6 +12,8 @@ namespace OpenCand.Core.Models
 
         public string Nome { get; set; }
 
+        public string Apelido { get; set; }
+
         public DateTime? DataNascimento { get; set; }
 
         public string Email { get; set; }
@@ -35,6 +37,7 @@ namespace OpenCand.Core.Models
         public Guid IdCandidato { get; set; }
         public string Cpf { get; set; }
         public string Nome { get; set; }
+        public string Apelido { get; set; }
         public string SqCandidato { get; set; }
         public int Ano { get; set; }
         public string TipoEleicao { get; set; }

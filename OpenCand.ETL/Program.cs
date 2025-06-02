@@ -24,9 +24,6 @@ namespace OpenCand
 
                 try
                 {
-                    logger.LogInformation("Initializing database");
-                    // make a test connection to the database
-
                     logger.LogInformation("Starting data parsing");
                     var parserManager = services.GetRequiredService<ParserManager>();
                     await parserManager.ParseFullDataAsync();

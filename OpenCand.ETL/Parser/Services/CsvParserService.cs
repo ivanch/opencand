@@ -92,6 +92,7 @@ namespace OpenCand.Parser.Services
                             Cpf = record.CPFCandidato,
                             SqCandidato = record.SequencialCandidato,
                             Nome = record.NomeCandidato,
+                            Apelido = record.Apelido,
                             Email = record.Email.Contains("@") ? record.Email : null,
                             Sexo = record.Genero,
                             EstadoCivil = record.EstadoCivil,
@@ -103,6 +104,7 @@ namespace OpenCand.Parser.Services
                                 {
                                     Cpf = record.CPFCandidato,
                                     Nome = record.NomeCandidato,
+                                    Apelido = record.Apelido,
                                     SqCandidato = record.SequencialCandidato,
                                     Ano = record.AnoEleicao,
                                     TipoEleicao = record.TipoAbrangencia,

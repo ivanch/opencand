@@ -29,6 +29,9 @@ namespace OpenCand.Parser.Models
         [Name("NM_CANDIDATO")]
         public string NomeCandidato { get; set; }
 
+        [Name("NM_URNA_CANDIDATO")]
+        public string Apelido { get; set; }
+
         [Name("NR_CPF_CANDIDATO")]
         public string CPFCandidato { get; set; }
 

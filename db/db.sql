@@ -8,6 +8,7 @@ CREATE TABLE candidato (
     idcandidato UUID NOT NULL PRIMARY KEY,
     cpf VARCHAR(11),
     nome VARCHAR(255) NOT NULL,
+    apelido VARCHAR(255),
     datanascimento TIMESTAMPTZ,
     email TEXT,
     sexo CHAR(15),
@@ -16,12 +17,14 @@ CREATE TABLE candidato (
     ocupacao VARCHAR(150)
 );
 CREATE INDEX idx_candidato_nome ON candidato (nome);
+CREATE INDEX idx_candidato_apelido ON candidato (apelido);
 
 -- Each candidato (idcandidato, cpf, nome) will be mapped to a (sqcandidato, ano, tipo_eleicao, sg_uf, cargo, resultado) 
 CREATE TABLE candidato_mapping (
     idcandidato UUID NOT NULL,
     cpf VARCHAR(11),
     nome VARCHAR(255) NOT NULL,
+    apelido VARCHAR(255),
     sqcandidato TEXT,
     ano INT NOT NULL,
     tipoeleicao VARCHAR(50),
@@ -36,6 +39,7 @@ CREATE TABLE candidato_mapping (
 );
 CREATE INDEX idx_candidato_mapping_cpf ON candidato_mapping (cpf);
 CREATE INDEX idx_candidato_mapping_nome ON candidato_mapping (nome);
+CREATE INDEX idx_candidato_mapping_apelido ON candidato_mapping (apelido);
 CREATE INDEX idx_candidato_mapping_ano ON candidato_mapping (ano);
 CREATE INDEX idx_candidato_mapping_sqcandidato ON candidato_mapping (sqcandidato);
 

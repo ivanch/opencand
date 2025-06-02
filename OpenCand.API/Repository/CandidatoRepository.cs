@@ -15,11 +15,21 @@ namespace OpenCand.Repository
             using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 return (await connection.QueryAsync<Candidato>(@"
-                    SELECT idcandidato, cpf, nome, datanascimento, email, sexo, estadocivil, escolaridade, ocupacao
+                    SELECT *
+                          CASE
+                            WHEN lower(nome) = lower(@query) THEN 0             -- Exact match (case-insensitive)
+                            WHEN lower(nome) LIKE lower(@query) || '%' THEN 1   -- Starts with match (case-insensitive)
+                            WHEN lower(nome) LIKE '%' || lower(@query) THEN 2   -- Contains anywhere match (case-insensitive)
+                            WHEN cpf = @query THEN 0                            -- Exact match for CPF
+                            WHEN cpf LIKE @query || '%' THEN 1                  -- Starts with match for CPF
+                            WHEN cpf LIKE '%' || @query THEN 2                  -- Contains anywhere match for CPF
+                            ELSE 3
+                          END AS name_rank
                     FROM candidato
                     WHERE nome ILIKE '%' || @query || '%' OR
-                          cpf ILIKE '%' || @query || '%' OR
-                          email ILIKE '%' || @query || '%'
+                          cpf ILIKE '%' || @query || '%'
+                    ORDER BY name_rank,
+                            length(nome) ASC
                     LIMIT 10;",
                     new { query })).AsList();
             }
