@@ -1,6 +1,7 @@
 using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OpenCand.ETL.Contracts;
 
@@ -11,8 +12,11 @@ namespace OpenCand.Parser.Services
         private readonly ILogger<CsvParserService<CsvObj>> logger;
         private readonly CsvFixerService csvFixerService;
         private readonly IParserService<CsvObj> parserService;
+        private readonly IConfiguration configuration;
 
         private readonly CsvConfiguration parserConfig;
+
+        private readonly int MaxDegreeOfParallelism;
 
         // Progress tracking fields
         private long processedCount;
@@ -24,11 +28,26 @@ namespace OpenCand.Parser.Services
         public CsvParserService(
             ILogger<CsvParserService<CsvObj>> logger,
             IParserService<CsvObj> parserService,
-            CsvFixerService csvFixerService)
+            CsvFixerService csvFixerService,
+            IConfiguration configuration)
         {
             this.logger = logger;
             this.csvFixerService = csvFixerService;
             this.parserService = parserService;
+            this.configuration = configuration;
+
+            var defaultThreadCount = configuration.GetValue<int>("ParserSettings:DefaultThreads", 25);
+
+            if (configuration.GetValue<string>($"ParserSettings:{typeof(CsvObj).Name}Threads") == null)
+            {
+                logger.LogInformation($"ParserSettings:{typeof(CsvObj).Name}Threads not found in configuration, using default value of {defaultThreadCount}.");
+                MaxDegreeOfParallelism = configuration.GetValue<int>("ParserSettings:DefaultThreads", defaultThreadCount);
+            }
+            else
+            {
+                MaxDegreeOfParallelism = configuration.GetValue<int>($"ParserSettings:{typeof(CsvObj).Name}Threads", defaultThreadCount);
+                logger.LogInformation($"Using {MaxDegreeOfParallelism} threads for parsing {typeof(CsvObj).Name} based on configuration.");
+            }
 
             parserConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
@@ -60,7 +79,7 @@ namespace OpenCand.Parser.Services
                 using var csv = new CsvReader(reader, parserConfig);
                 var po = new ParallelOptions
                 {
-                    MaxDegreeOfParallelism = 40
+                    MaxDegreeOfParallelism = MaxDegreeOfParallelism
                 };
 
                 //csv.Context.RegisterClassMap<ClassMap<CsvObj>>(); // optional for advanced mapping, not needed
