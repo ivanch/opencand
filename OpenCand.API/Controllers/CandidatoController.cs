@@ -1,11 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.VisualBasic;
+using OpenCand.API.Config;
 using OpenCand.API.Model;
 using OpenCand.API.Services;
 using OpenCand.Core.Models;
 
 namespace OpenCand.API.Controllers
 {
+    [EnableRateLimiting(RateLimitingConfig.DefaultPolicy)]
     public class CandidatoController : BaseController
     {
         private readonly OpenCandService openCandService;
@@ -16,6 +19,7 @@ namespace OpenCand.API.Controllers
         }
 
         [HttpGet("search")]
+        [EnableRateLimiting(RateLimitingConfig.CandidatoSearchPolicy)]
         public async Task<CandidatoSearchResult> CandidatoSearch([FromQuery] string q)
         {
             return await openCandService.SearchCandidatosAsync(q);
@@ -40,6 +44,7 @@ namespace OpenCand.API.Controllers
         }
 
         [HttpGet("{id}/reveal-cpf")]
+        [EnableRateLimiting(RateLimitingConfig.CpfRevealPolicy)]
         public async Task<CpfRevealResult> GetCandidatoCpfById([FromRoute] Guid id)
         {
             var rnd = new Random();

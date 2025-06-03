@@ -10,12 +10,13 @@ namespace OpenCand.API
     {
         public static void Main(string[] args)
         {
-            var builder = WebApplication.CreateBuilder(args);
-
-            // Add services to the container.
+            var builder = WebApplication.CreateBuilder(args);            // Add services to the container.
             builder.Services.AddControllers();
 
             SetupServices(builder);
+
+            // Configure rate limiting
+            builder.Services.ConfigureRateLimiting();
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
@@ -34,9 +35,10 @@ namespace OpenCand.API
             {
                 FileProvider = new PhysicalFileProvider(Path.Combine(workingDir, "fotos_cand")),
                 RequestPath = "/assets/fotos"
-            });
+            });            app.UseHttpsRedirection();
 
-            app.UseHttpsRedirection();
+            // Use rate limiting middleware
+            app.UseRateLimiter();
 
             app.UseAuthorization();
 

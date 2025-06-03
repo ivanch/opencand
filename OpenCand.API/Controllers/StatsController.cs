@@ -1,9 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using OpenCand.API.Config;
 using OpenCand.API.Services;
 using OpenCand.Core.Models;
 
 namespace OpenCand.API.Controllers
 {
+    [EnableRateLimiting(RateLimitingConfig.DefaultPolicy)]
     public class StatsController : BaseController
     {
         private readonly OpenCandService openCandService;
