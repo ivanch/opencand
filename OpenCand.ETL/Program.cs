@@ -3,8 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenCand.Config;
+using OpenCand.ETL.Contracts;
+using OpenCand.ETL.Parser.ParserServices;
 using OpenCand.ETL.Repository;
 using OpenCand.Parser;
+using OpenCand.Parser.Models;
 using OpenCand.Parser.Services;
 using OpenCand.Repository;
 using OpenCand.Services;
@@ -52,9 +55,14 @@ namespace OpenCand
                 {
                     // Configuration
                     services.Configure<CsvSettings>(hostContext.Configuration.GetSection("CsvSettings"));
-                    
+
                     // Services
-                    services.AddTransient<CsvParserService>();
+                    services.AddTransient<IParserService<CandidatoCSV>, CandidatoParserService>();
+                    services.AddTransient<IParserService<BemCandidatoCSV>, BemCandidatoParserService>();
+                    services.AddTransient<IParserService<RedeSocialCSV>, RedeSocialParserService>();
+                    services.AddTransient<CsvParserService<CandidatoCSV>>();
+                    services.AddTransient<CsvParserService<BemCandidatoCSV>>();
+                    services.AddTransient<CsvParserService<RedeSocialCSV>>();
                     services.AddTransient<ParserManager>();
                     services.AddTransient<CandidatoService>();
                     services.AddTransient<BemCandidatoService>();

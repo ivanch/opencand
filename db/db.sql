@@ -31,7 +31,7 @@ CREATE TABLE candidato_mapping (
     siglauf VARCHAR(2),
     nomeue VARCHAR(100),
     cargo VARCHAR(50),
-    sgpartido VARCHAR(10),
+    sgpartido VARCHAR(50),
     nrcandidato VARCHAR(20),
     resultado VARCHAR(50),
     CONSTRAINT pk_candidato_mapping PRIMARY KEY (idcandidato, ano, siglauf, nomeue, cargo, nrcandidato, resultado),
@@ -71,7 +71,7 @@ CREATE INDEX idx_rede_social_idcandidato ON rede_social (idcandidato);
 
 ---- Table for storing party information
 CREATE TABLE partido (
-    sigla VARCHAR(10) NOT NULL PRIMARY KEY,
+    sigla VARCHAR(50) NOT NULL PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
     numero INT NOT NULL
 );

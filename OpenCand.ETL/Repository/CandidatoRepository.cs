@@ -50,7 +50,8 @@ namespace OpenCand.Repository
             {
                 await connection.ExecuteAsync(@"
                     INSERT INTO candidato_mapping (idcandidato, cpf, nome, apelido, sqcandidato, ano, tipoeleicao, siglauf, nomeue, cargo, nrcandidato, sgpartido, resultado)
-                    VALUES (@idcandidato, @cpf, @nome, @apelido, @sqcandidato, @ano, @tipoeleicao, @siglauf, @nomeue, @cargo, @nrcandidato, @sgpartido, @resultado);",
+                    VALUES (@idcandidato, @cpf, @nome, @apelido, @sqcandidato, @ano, @tipoeleicao, @siglauf, @nomeue, @cargo, @nrcandidato, @sgpartido, @resultado)
+                    ON CONFLICT DO NOTHING;",
                     new
                     {
                         idcandidato = candidatoMapping.IdCandidato,
@@ -70,27 +71,45 @@ namespace OpenCand.Repository
             }
         }
 
-        public async Task<List<CandidatoMapping>?> GetCandidatoMappingByCpf(string cpf)
+        public async Task<Candidato?> GetCandidatoByCpf(string cpf)
         {
             using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 var query = @"
-                    SELECT idcandidato, cpf, nome, sqcandidato, ano, tipoeleicao, siglauf, nomeue, cargo, nrcandidato, resultado
-                    FROM candidato_mapping
+                    SELECT *
+                    FROM candidato
                     WHERE cpf = @cpf";
-                return (await connection.QueryAsync<CandidatoMapping>(query, new { cpf })).AsList();
+                return await connection.QueryFirstOrDefaultAsync<Candidato>(query, new { cpf });
             }
         }
 
-        public async Task<List<CandidatoMapping>?> GetCandidatoMappingByNome(string nome, string sqcandidato, int ano, string siglauf, string nomeue, string nrcandidato)
+        public async Task<Candidato?> GetCandidatoByNome(string nome, DateTime datanascimento)
         {
             using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 var query = @"
-                    SELECT idcandidato, cpf, nome, sqcandidato, ano, tipoeleicao, siglauf, nomeue, cargo, nrcandidato, resultado
+                    SELECT *
+                    FROM candidato
+                    WHERE nome = @nome AND datanascimento = @datanascimento";
+                return await connection.QueryFirstOrDefaultAsync<Candidato>(query, new { nome, datanascimento });
+            }
+        }
+
+        public async Task<CandidatoMapping?> GetCandidatoMappingByDetails(string nome, int ano, string cargo, string siglauf, string nomeue, string nrcandidato, string resultado)
+        {
+            using (var connection = new NpgsqlConnection(ConnectionString))
+            {
+                var query = @"
+                    SELECT *
                     FROM candidato_mapping
-                    WHERE nome = @nome AND sqcandidato = @sqcandidato AND ano = @ano AND siglauf = @siglauf AND nomeue = @nomeue AND nrcandidato = @nrcandidato";
-                return (await connection.QueryAsync<CandidatoMapping>(query, new { nome, sqcandidato, ano, siglauf, nomeue, nrcandidato })).AsList();
+                    WHERE nome = @nome AND 
+                          ano = @ano AND 
+                          cargo = @cargo AND 
+                          siglauf = @siglauf AND 
+                          nomeue = @nomeue AND 
+                          nrcandidato = @nrcandidato AND 
+                          resultado = @resultado";
+                return await connection.QueryFirstOrDefaultAsync<CandidatoMapping>(query, new { nome, ano, cargo, siglauf, nomeue, nrcandidato, resultado });
             }
         }
 

@@ -1,15 +1,14 @@
 ﻿using System.Text;
 using Microsoft.Extensions.Logging;
-using OpenCand.Repository;
 
 namespace OpenCand.Parser.Services
 {
     public class CsvFixerService
     {
-        private readonly ILogger<CsvParserService> logger;
+        private readonly ILogger<CsvFixerService> logger;
 
         public CsvFixerService(
-            ILogger<CsvParserService> logger)
+            ILogger<CsvFixerService> logger)
         {
             this.logger = logger;
         }

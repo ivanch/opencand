@@ -35,57 +35,59 @@ namespace OpenCand.Services
                 await partidoRepository.AddPartidoAsync(candidatoMapping.Partido);
             }
 
-            List<CandidatoMapping>? mappings = null;
-            CandidatoMapping? existingMapping = null;
+            // Check if the candidate already exists in the database
+            Candidato? existingCandidato;
             if (candidato.Cpf == null || candidato.Cpf.Length != 11)
             {
-                // If CPF is not provided or invalid, we STRICTLY search by name and other properties
-                mappings = await candidatoRepository.GetCandidatoMappingByNome(candidato.Nome,
-                                                                               candidato.SqCandidato,
-                                                                               candidatoMapping.Ano,
-                                                                               candidatoMapping.SiglaUF,
-                                                                               candidatoMapping.NomeUE,
-                                                                               candidatoMapping.NrCandidato);
+                existingCandidato = await candidatoRepository.GetCandidatoByNome(candidato.Nome, candidato.DataNascimento.GetValueOrDefault());
             }
             else
             {
-                mappings = await candidatoRepository.GetCandidatoMappingByCpf(candidato.Cpf);
+                existingCandidato = await candidatoRepository.GetCandidatoByCpf(candidato.Cpf);
             }
 
+            // If the candidate already exists, we can update the mappings
+            if (existingCandidato != null)
+            {
+                candidato.IdCandidato = existingCandidato.IdCandidato;
+                candidato.Cpf = GetNonEmptyString(existingCandidato.Cpf, candidato.Cpf);
+                candidato.Email = GetNonEmptyString(existingCandidato.Email, candidato.Email);
+                candidato.EstadoCivil = GetNonEmptyString(existingCandidato.EstadoCivil, candidato.EstadoCivil);
+                candidato.Apelido = GetNonEmptyString(existingCandidato.Apelido, candidato.Apelido);
+                candidato.Escolaridade = GetNonEmptyString(existingCandidato.Escolaridade, candidato.Escolaridade);
+                candidato.Ocupacao = GetNonEmptyString(existingCandidato.Ocupacao, candidato.Ocupacao);
+                candidato.Sexo = GetNonEmptyString(existingCandidato.Sexo, candidato.Sexo);
+
+                candidatoMapping.IdCandidato = candidato.IdCandidato;
+                candidatoMapping.Cpf = GetNonEmptyString(candidato.Cpf, candidatoMapping.Cpf);
+
+                // Update the entries for the existing candidate
+                await candidatoRepository.AddCandidatoAsync(candidato);
+                await candidatoRepository.AddCandidatoMappingAsync(candidatoMapping);
+                return;
+            }
+
+            // If the candidate does not exist, we create a new one
+            CandidatoMapping? existingMapping = await candidatoRepository.GetCandidatoMappingByDetails(candidato.Nome,
+                                                                                                       candidatoMapping.Ano,
+                                                                                                       candidatoMapping.Cargo,
+                                                                                                       candidatoMapping.SiglaUF,
+                                                                                                       candidatoMapping.NomeUE,
+                                                                                                       candidatoMapping.NrCandidato,
+                                                                                                       candidatoMapping.Resultado);
             // Check if exists
-            if (mappings != null && mappings.Count > 0)
+            if (existingMapping != null)
             {
-                existingMapping = mappings.FirstOrDefault(m => m.Ano == candidatoMapping.Ano &&
-                                                               m.Cargo == candidatoMapping.Cargo &&
-                                                               m.SiglaUF == candidatoMapping.SiglaUF &&
-                                                               m.NomeUE == candidatoMapping.NomeUE &&
-                                                               m.NrCandidato == candidatoMapping.NrCandidato &&
-                                                               m.Resultado == candidatoMapping.Resultado);
+                candidato.IdCandidato = existingMapping.IdCandidato;
+                candidato.Cpf = GetNonEmptyString(existingMapping.Cpf, candidato.Cpf);
+                candidato.Apelido = GetNonEmptyString(existingMapping.Apelido, candidato.Apelido);
+                await candidatoRepository.AddCandidatoAsync(candidato);
                 
-                // Already exists one for the current election
-                if (existingMapping != null)
-                {
-                    candidato.IdCandidato = existingMapping.IdCandidato;
-                    candidato.Cpf = existingMapping.Cpf;
+                return;
+            }
 
-                    await candidatoRepository.AddCandidatoAsync(candidato);
-                    return;
-                }
-                // If exists (but not for the current election), we take the existing idcandidato
-                // and create a new mapping for the current election
-                else
-                {
-                    existingMapping = mappings.First();
-                    candidato.IdCandidato = existingMapping.IdCandidato;
-                    candidato.Cpf = existingMapping.Cpf;
-                }
-            }
-            else
-            {
-                // No current mapping, we create a new one
-                // and create a new mapping for the current election
-                candidato.IdCandidato = Guid.NewGuid();
-            }
+            // No current mapping, we create a new one and create a new mapping for the current election
+            candidato.IdCandidato = Guid.NewGuid();
 
             // Set the mapping properties
             candidatoMapping.IdCandidato = candidato.IdCandidato;
@@ -94,6 +96,19 @@ namespace OpenCand.Services
 
             await candidatoRepository.AddCandidatoAsync(candidato);
             await candidatoRepository.AddCandidatoMappingAsync(candidatoMapping);
+        }
+
+        public string GetNonEmptyString(string? value1, string? value2)
+        {
+            if (!string.IsNullOrWhiteSpace(value1))
+            {
+                return value1;
+            }
+            else if (!string.IsNullOrWhiteSpace(value2))
+            {
+                return value2;
+            }
+            return string.Empty;
         }
 
     }

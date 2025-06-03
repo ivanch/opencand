@@ -2,116 +2,81 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenCand.Config;
+using OpenCand.Parser.Models;
 using OpenCand.Parser.Services;
 
 namespace OpenCand.Parser
 {
     public class ParserManager
     {
-        private readonly CsvParserService csvParserService;
         private readonly ILogger<ParserManager> logger;
         private readonly CsvSettings csvSettings;
-        private readonly IConfiguration configuration;
+
+        private readonly CsvParserService<CandidatoCSV> candidatoParserService;
+        private readonly CsvParserService<BemCandidatoCSV> bemCandidatoParserService;
+        private readonly CsvParserService<RedeSocialCSV> redeSocialParserService;
+
+        private readonly string BasePath;
 
         public ParserManager(
-            CsvParserService csvParserService,
             IOptions<CsvSettings> csvSettings,
             ILogger<ParserManager> logger,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            CsvParserService<CandidatoCSV> candidatoParserService,
+            CsvParserService<BemCandidatoCSV> bemCandidatoParserService,
+            CsvParserService<RedeSocialCSV> redeSocialParserService)
         {
-            this.csvParserService = csvParserService;
             this.logger = logger;
             this.csvSettings = csvSettings.Value;
-            this.configuration = configuration;
+
+            this.candidatoParserService = candidatoParserService;
+            this.bemCandidatoParserService = bemCandidatoParserService;
+            this.redeSocialParserService = redeSocialParserService;
+
+            // Get the base path from either SampleFolder in csvSettings or the BasePath in configuration
+            BasePath = configuration.GetValue<string>("BasePath") ?? string.Empty;
+            if (string.IsNullOrEmpty(BasePath))
+            {
+                throw new Exception("ParseFullDataAsync - BasePath is not configured in appsettings.json or CsvSettings.SampleFolder");
+            }
         }
 
         public async Task ParseFullDataAsync()
         {
             logger.LogInformation("ParseFullDataAsync - Starting parsing");
+            logger.LogInformation("ParseFullDataAsync - Processing will happen with BasePath: {BasePath}", BasePath);
 
-            // Get the base path from either SampleFolder in csvSettings or the BasePath in configuration
-            var basePath = configuration.GetValue<string>("BasePath");
+            var candidatosDirectory = Path.Combine(BasePath, csvSettings.CandidatosFolder);
+            var bensCandidatosDirectory = Path.Combine(BasePath, csvSettings.BensCandidatosFolder);
+            var redesSociaisDirectory = Path.Combine(BasePath, csvSettings.RedesSociaisFolder);
 
-            if (string.IsNullOrEmpty(basePath))
+            //await ParseFolder(candidatosDirectory, candidatoParserService);
+            await ParseFolder(bensCandidatosDirectory, bemCandidatoParserService);
+            await ParseFolder(redesSociaisDirectory, redeSocialParserService);
+
+            logger.LogInformation("ParseFullDataAsync - Full data parsing completed!");
+        }
+
+        private async Task ParseFolder<CsvObj>(string csvDirectory, CsvParserService<CsvObj> csvParserService)
+        {
+            if (Directory.Exists(csvDirectory))
             {
-                logger.LogError("ParseFullDataAsync - BasePath is not configured in appsettings.json or CsvSettings.SampleFolder");
-                return;
+                foreach (var filePath in Directory.GetFiles(csvDirectory, "*.csv"))
+                {
+                    // Check if filePath contains "fix_" prefix
+                    if (filePath.Contains("fix_"))
+                    {
+                        logger.LogInformation("ParseFolder - Skipping already fixed file: {FilePath}", filePath);
+                        continue;
+                    }
+
+                    logger.LogInformation("ParseFolder - Parsing data from {FilePath}", filePath);
+                    await csvParserService.ParseFolderAsync(filePath);
+                }
             }
-
-            logger.LogInformation("ParseFullDataAsync - Processing will happen with BasePath: {BasePath}", basePath);
-
-            try
+            else
             {
-                var candidatosDirectory = Path.Combine(basePath, csvSettings.CandidatosFolder);
-                var bensCandidatosDirectory = Path.Combine(basePath, csvSettings.BensCandidatosFolder);
-                var redesSociaisDirectory = Path.Combine(basePath, csvSettings.RedesSociaisFolder);
-
-                if (Directory.Exists(candidatosDirectory))
-                {
-                    foreach (var filePath in Directory.GetFiles(candidatosDirectory, "*.csv"))
-                    {
-                        // Check if filePath contains "fix_" prefix
-                        if (filePath.Contains("fix_"))
-                        {
-                            logger.LogInformation("ParseFullDataAsync - Skipping already fixed file: {FilePath}", filePath);
-                            continue;
-                        }
-
-                        logger.LogInformation("ParseFullDataAsync - Parsing candidatos data from {FilePath}", filePath);
-                        await csvParserService.ParseCandidatosAsync(filePath);
-                    }
-                }
-                else
-                {
-                    logger.LogWarning("ParseFullDataAsync - 'Candidatos' directory not found at {Directory}", candidatosDirectory);
-                }
-
-                if (Directory.Exists(bensCandidatosDirectory))
-                {
-                    foreach (var filePath in Directory.GetFiles(bensCandidatosDirectory, "*.csv"))
-                    {
-                        // Check if filePath contains "fix_" prefix
-                        if (filePath.Contains("fix_"))
-                        {
-                            logger.LogInformation("ParseFullDataAsync - Skipping already fixed file: {FilePath}", filePath);
-                            continue;
-                        }
-
-                        logger.LogInformation("ParseFullDataAsync - Parsing bens candidatos data from {FilePath}", filePath);
-                        await csvParserService.ParseBensCandidatosAsync(filePath);
-                    }
-                }
-                else
-                {
-                    logger.LogWarning("ParseFullDataAsync - 'Bens candidatos' directory not found at {Directory}", bensCandidatosDirectory);
-                }
-
-                if (Directory.Exists(redesSociaisDirectory))
-                {
-                    foreach (var filePath in Directory.GetFiles(redesSociaisDirectory, "*.csv"))
-                    {
-                        // Check if filePath contains "fix_" prefix
-                        if (filePath.Contains("fix_"))
-                        {
-                            logger.LogInformation("ParseFullDataAsync - Skipping already fixed file: {FilePath}", filePath);
-                            continue;
-                        }
-
-                        logger.LogInformation("ParseFullDataAsync - Parsing redes sociais data from {FilePath}", filePath);
-                        await csvParserService.ParseRedeSocialAsync(filePath);
-                    }
-                }
-                else
-                {
-                    logger.LogWarning("ParseFullDataAsync - 'Redes sociais' directory not found at {Directory}", redesSociaisDirectory);
-                }
-
-                logger.LogInformation("ParseFullDataAsync - Full data parsing completed!");
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "ParseFullDataAsync - Error parsing full data set");
-                throw;
+                logger.LogWarning("ParseFolder - Directory not found at {Directory}", csvDirectory);
             }
         }
     }

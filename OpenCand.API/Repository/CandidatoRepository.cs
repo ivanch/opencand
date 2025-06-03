@@ -15,18 +15,22 @@ namespace OpenCand.Repository
             using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 return (await connection.QueryAsync<Candidato>(@"
-                    SELECT *
+                    SELECT *, 
                           CASE
-                            WHEN lower(nome) = lower(@query) THEN 0             -- Exact match (case-insensitive)
-                            WHEN lower(nome) LIKE lower(@query) || '%' THEN 1   -- Starts with match (case-insensitive)
-                            WHEN lower(nome) LIKE '%' || lower(@query) THEN 2   -- Contains anywhere match (case-insensitive)
-                            WHEN cpf = @query THEN 0                            -- Exact match for CPF
-                            WHEN cpf LIKE @query || '%' THEN 1                  -- Starts with match for CPF
-                            WHEN cpf LIKE '%' || @query THEN 2                  -- Contains anywhere match for CPF
+                            WHEN lower(apelido) = lower(@query) THEN 0              -- apelido Exact match (case-insensitive)
+                            WHEN lower(apelido) LIKE lower(@query) || '%' THEN 1    -- apelido Starts with match (case-insensitive)
+                            WHEN lower(apelido) LIKE '%' || lower(@query) THEN 2    -- apelido Contains anywhere match (case-insensitive)
+                            WHEN lower(nome) = lower(@query) THEN 0                 -- nome Exact match (case-insensitive)
+                            WHEN lower(nome) LIKE lower(@query) || '%' THEN 1       -- nome Starts with match (case-insensitive)
+                            WHEN lower(nome) LIKE '%' || lower(@query) THEN 2       -- nome Contains anywhere match (case-insensitive)
+                            WHEN cpf = @query THEN 0                                -- cpf Exact match for CPF
+                            WHEN cpf LIKE @query || '%' THEN 1                      -- cpf Starts with match for CPF
+                            WHEN cpf LIKE '%' || @query THEN 2                      -- cpf Contains anywhere match for CPF
                             ELSE 3
                           END AS name_rank
                     FROM candidato
-                    WHERE nome ILIKE '%' || @query || '%' OR
+                    WHERE apelido ILIKE '%' || @query || '%' OR
+                          nome ILIKE '%' || @query || '%' OR
                           cpf ILIKE '%' || @query || '%'
                     ORDER BY name_rank,
                             length(nome) ASC
