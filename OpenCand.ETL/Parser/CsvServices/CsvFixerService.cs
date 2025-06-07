@@ -73,8 +73,10 @@ namespace OpenCand.Parser.Services
                     {
                         if (columns.Length > headerCount)
                         {
-                            logger.LogCritical($"FixCsvFile - Line {i + 1} has {columns.Length} columns, expected {headerCount}. Halting process.");
-                            return string.Empty; // Critical error, cannot fix this line => needs manual intervention
+                            // logger.LogCritical($"FixCsvFile - Line {i + 1} has {columns.Length} columns, expected {headerCount}. Halting process.");
+                            // return string.Empty; // Critical error, cannot fix this line => needs manual intervention
+                            // consider as normal line
+                            break;
                         }
 
                         logger.LogWarning($"FixCsvFile - Line {i + 1} has {columns.Length} columns, expected {headerCount}. Attempting to fix [i = {lineJump}]...");

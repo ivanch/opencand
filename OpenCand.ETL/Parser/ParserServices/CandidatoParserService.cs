@@ -63,6 +63,7 @@ namespace OpenCand.ETL.Parser.ParserServices
                                     Apelido = record.Apelido,
                                     SqCandidato = record.SequencialCandidato,
                                     Ano = record.AnoEleicao,
+                                    Turno = record.Turno,
                                     TipoEleicao = record.TipoAbrangencia,
                                     NomeUE = record.NomeUE,
                                     SiglaUF = record.SiglaUF,

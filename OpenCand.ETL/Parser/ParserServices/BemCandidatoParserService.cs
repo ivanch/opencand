@@ -5,6 +5,7 @@ using OpenCand.ETL.Contracts;
 using OpenCand.Parser.Models;
 using OpenCand.Services;
 using OpenCand.Parser.Services;
+using OpenCand.ETL.Extensions;
 
 namespace OpenCand.ETL.Parser.ParserServices
 {
@@ -25,7 +26,7 @@ namespace OpenCand.ETL.Parser.ParserServices
         {
             // Parse decimal value
             decimal? valor = null;
-            if (!string.IsNullOrEmpty(record.ValorBemCandidato))
+            if (!record.ValorBemCandidato.IsNullOrEmpty())
             {
                 string normalizedValue = record.ValorBemCandidato.Replace(".", "").Replace(",", ".");
                 if (decimal.TryParse(normalizedValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsedValue))

@@ -40,6 +40,7 @@ namespace OpenCand.Core.Models
         public string Apelido { get; set; }
         public string SqCandidato { get; set; }
         public int Ano { get; set; }
+        public string Turno { get; set; }
         public string TipoEleicao { get; set; }
         public string SiglaUF { get; set; }
         public string NomeUE { get; set; }

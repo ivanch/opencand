@@ -21,4 +21,14 @@ namespace OpenCand.API.Model
     {
         public string Cpf { get; set; }
     }
+
+    public class DespesasResult
+    {
+        public List<Despesa> Despesas { get; set; }
+    }
+
+    public class ReceitaResult
+    {
+        public List<Receita> Receitas { get; set; }
+    }
 }

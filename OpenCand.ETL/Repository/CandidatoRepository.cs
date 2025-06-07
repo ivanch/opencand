@@ -49,8 +49,8 @@ namespace OpenCand.Repository
             using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(@"
-                    INSERT INTO candidato_mapping (idcandidato, cpf, nome, apelido, sqcandidato, ano, tipoeleicao, siglauf, nomeue, cargo, nrcandidato, sgpartido, resultado)
-                    VALUES (@idcandidato, @cpf, @nome, @apelido, @sqcandidato, @ano, @tipoeleicao, @siglauf, @nomeue, @cargo, @nrcandidato, @sgpartido, @resultado)
+                    INSERT INTO candidato_mapping (idcandidato, cpf, nome, apelido, sqcandidato, ano, turno, tipoeleicao, siglauf, nomeue, cargo, nrcandidato, sgpartido, resultado)
+                    VALUES (@idcandidato, @cpf, @nome, @apelido, @sqcandidato, @ano, @turno, @tipoeleicao, @siglauf, @nomeue, @cargo, @nrcandidato, @sgpartido, @resultado)
                     ON CONFLICT DO NOTHING;",
                     new
                     {
@@ -60,6 +60,7 @@ namespace OpenCand.Repository
                         apelido = candidatoMapping.Apelido,
                         sqcandidato = candidatoMapping.SqCandidato,
                         ano = candidatoMapping.Ano,
+                        turno = candidatoMapping.Turno,
                         tipoeleicao = candidatoMapping.TipoEleicao,
                         siglauf = candidatoMapping.SiglaUF,
                         nomeue = candidatoMapping.NomeUE,
@@ -80,6 +81,18 @@ namespace OpenCand.Repository
                     FROM candidato
                     WHERE cpf = @cpf";
                 return await connection.QueryFirstOrDefaultAsync<Candidato>(query, new { cpf });
+            }
+        }
+
+        public async Task<Guid?> GetIdCandidatoBySqCandidato(string sqcandidato)
+        {
+            using (var connection = new NpgsqlConnection(ConnectionString))
+            {
+                var query = @"
+                    SELECT idcandidato
+                    FROM candidato_mapping
+                    WHERE sqcandidato = @sqcandidato";
+                return await connection.QueryFirstOrDefaultAsync<Guid>(query, new { sqcandidato });
             }
         }
 

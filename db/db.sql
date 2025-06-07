@@ -3,6 +3,8 @@ DROP TABLE IF EXISTS candidato_mapping CASCADE;
 DROP TABLE IF EXISTS rede_social CASCADE;
 DROP TABLE IF EXISTS candidato CASCADE;
 DROP TABLE IF EXISTS partido CASCADE;
+DROP TABLE IF EXISTS despesas_candidato CASCADE;
+DROP TABLE IF EXISTS receitas_candidato CASCADE;
 
 CREATE TABLE candidato (
     idcandidato UUID NOT NULL PRIMARY KEY,
@@ -25,7 +27,8 @@ CREATE TABLE candidato_mapping (
     cpf VARCHAR(11),
     nome VARCHAR(255) NOT NULL,
     apelido VARCHAR(255),
-    sqcandidato TEXT,
+    sqcandidato VARCHAR(50) NOT NULL,
+    turno VARCHAR(2) NOT NULL,
     ano INT NOT NULL,
     tipoeleicao VARCHAR(50),
     siglauf VARCHAR(2),
@@ -77,3 +80,57 @@ CREATE TABLE partido (
 );
 CREATE INDEX idx_partido_nome ON partido (nome);
 CREATE INDEX idx_partido_numero ON partido (numero);
+
+---- Tables for storing despesas e receitas of candidacies
+CREATE TABLE despesas_candidato (
+    idreceita UUID NOT NULL DEFAULT gen_random_uuid(),
+    idcandidato UUID NOT NULL,
+    ano INT NOT NULL,
+    turno VARCHAR(2) NOT NULL,
+    sqcandidato VARCHAR(50) NOT NULL,
+    sgpartido VARCHAR(50) NOT NULL,
+    tipofornecedor VARCHAR(150),
+    cnpjfornecedor VARCHAR(14),
+    cpffornecedor VARCHAR(11),
+    nomefornecedor VARCHAR(255),
+    nomefornecedorrfb VARCHAR(255),
+    municipiofornecedor VARCHAR(100),
+    tipodocumento VARCHAR(50),
+    datadespesa TIMESTAMPTZ,
+    descricao TEXT,
+    origemdespesa TEXT,
+    valor NUMERIC(20, 2),
+    CONSTRAINT pk_despesas_candidato PRIMARY KEY (idreceita),
+    CONSTRAINT fk_despesas_candidato_candidato FOREIGN KEY (idcandidato) REFERENCES candidato(idcandidato) ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE INDEX idx_despesas_candidato_idcandidato ON despesas_candidato (idcandidato);
+CREATE INDEX idx_despesas_candidato_ano ON despesas_candidato (ano);
+CREATE INDEX idx_despesas_candidato_sqcandidato ON despesas_candidato (sqcandidato);
+CREATE INDEX idx_despesas_candidato_sgpartido ON despesas_candidato (sgpartido);
+
+CREATE TABLE receitas_candidato (
+    idreceita UUID NOT NULL DEFAULT gen_random_uuid(),
+    idcandidato UUID NOT NULL,
+    ano INT NOT NULL,
+    turno VARCHAR(2) NOT NULL,
+    sqcandidato VARCHAR(50) NOT NULL,
+    sgpartido VARCHAR(50) NOT NULL,
+    fontereceita VARCHAR(150),
+    origemreceita VARCHAR(250),
+    naturezareceita VARCHAR(250),
+    especiereceita VARCHAR(250),
+    cnpjdoador VARCHAR(14),
+    cpfdoador VARCHAR(11),
+    nomedoador VARCHAR(255),
+    nomedoadorrfb VARCHAR(255),
+    municipiodoador VARCHAR(100),
+    datareceita TIMESTAMPTZ,
+    descricao TEXT,
+    valor NUMERIC(20, 2),
+    CONSTRAINT pk_receitas_candidato PRIMARY KEY (idreceita),
+    CONSTRAINT fk_receitas_candidato_candidato FOREIGN KEY (idcandidato) REFERENCES candidato(idcandidato) ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE INDEX idx_receitas_candidato_idcandidato ON receitas_candidato (idcandidato);
+CREATE INDEX idx_receitas_candidato_ano ON receitas_candidato (ano);
+CREATE INDEX idx_receitas_candidato_sqcandidato ON receitas_candidato (sqcandidato);
+CREATE INDEX idx_receitas_candidato_sgpartido ON receitas_candidato (sgpartido);

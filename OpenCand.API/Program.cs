@@ -59,6 +59,7 @@ namespace OpenCand.API
             builder.Services.AddScoped<OpenCandRepository>();
             builder.Services.AddScoped<CandidatoRepository>();
             builder.Services.AddScoped<BemCandidatoRepository>();
+            builder.Services.AddScoped<DespesaReceitaRepository>();
             builder.Services.AddScoped<OpenCandService>();
         }
     }

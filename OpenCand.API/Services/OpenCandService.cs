@@ -12,6 +12,7 @@ namespace OpenCand.API.Services
         private readonly OpenCandRepository openCandRepository;
         private readonly CandidatoRepository candidatoRepository;
         private readonly BemCandidatoRepository bemCandidatoRepository;
+        private readonly DespesaReceitaRepository despesaReceitaRepository;
         private readonly IConfiguration configuration;
         private readonly FotosSettings fotoSettings;
         private readonly ILogger<OpenCandService> logger;
@@ -20,6 +21,7 @@ namespace OpenCand.API.Services
             OpenCandRepository openCandRepository,
             CandidatoRepository candidatoRepository,
             BemCandidatoRepository bemCandidatoRepository,
+            DespesaReceitaRepository despesaReceitaRepository,
             IOptions<FotosSettings> fotoSettings,
             IConfiguration configuration,
             ILogger<OpenCandService> logger)
@@ -27,6 +29,7 @@ namespace OpenCand.API.Services
             this.openCandRepository = openCandRepository;
             this.candidatoRepository = candidatoRepository;
             this.bemCandidatoRepository = bemCandidatoRepository;
+            this.despesaReceitaRepository = despesaReceitaRepository;
             this.fotoSettings = fotoSettings.Value;
             this.configuration = configuration;
             this.logger = logger;
@@ -111,6 +114,34 @@ namespace OpenCand.API.Services
             return new CpfRevealResult()
             {
                 Cpf = result
+            };
+        }
+
+        public async Task<DespesasResult> GetDespesasByIdAndYear(Guid idcandidato)
+        {
+            var result = await despesaReceitaRepository.GetDespesasByCandidatoIdYearAsync(idcandidato);
+            if (result == null)
+            {
+                return new DespesasResult();
+            }
+
+            return new DespesasResult()
+            {
+                Despesas = result.OrderByDescending(d => d.Ano).ThenByDescending(d => d.Valor).ToList()
+            };
+        }
+
+        public async Task<ReceitaResult> GetReceitasByIdAndYear(Guid idcandidato)
+        {
+            var result = await despesaReceitaRepository.GetReceitasByCandidatoIdYearAsync(idcandidato);
+            if (result == null)
+            {
+                return new ReceitaResult();
+            }
+
+            return new ReceitaResult()
+            {
+                Receitas = result.OrderByDescending(d => d.Ano).ThenByDescending(d => d.Valor).ToList()
             };
         }
     }

@@ -15,6 +15,8 @@ namespace OpenCand.Parser
         private readonly CsvParserService<CandidatoCSV> candidatoParserService;
         private readonly CsvParserService<BemCandidatoCSV> bemCandidatoParserService;
         private readonly CsvParserService<RedeSocialCSV> redeSocialParserService;
+        private readonly CsvParserService<DespesasCSV> despesaParserService;
+        private readonly CsvParserService<ReceitasCSV> receitaParserService;
 
         private readonly string BasePath;
 
@@ -24,7 +26,9 @@ namespace OpenCand.Parser
             IConfiguration configuration,
             CsvParserService<CandidatoCSV> candidatoParserService,
             CsvParserService<BemCandidatoCSV> bemCandidatoParserService,
-            CsvParserService<RedeSocialCSV> redeSocialParserService)
+            CsvParserService<RedeSocialCSV> redeSocialParserService,
+            CsvParserService<DespesasCSV> despesaParserService,
+            CsvParserService<ReceitasCSV> receitaParserService)
         {
             this.logger = logger;
             this.csvSettings = csvSettings.Value;
@@ -32,6 +36,8 @@ namespace OpenCand.Parser
             this.candidatoParserService = candidatoParserService;
             this.bemCandidatoParserService = bemCandidatoParserService;
             this.redeSocialParserService = redeSocialParserService;
+            this.despesaParserService = despesaParserService;
+            this.receitaParserService = receitaParserService;
 
             // Get the base path from either SampleFolder in csvSettings or the BasePath in configuration
             BasePath = configuration.GetValue<string>("BasePath") ?? string.Empty;
@@ -49,10 +55,14 @@ namespace OpenCand.Parser
             var candidatosDirectory = Path.Combine(BasePath, csvSettings.CandidatosFolder);
             var bensCandidatosDirectory = Path.Combine(BasePath, csvSettings.BensCandidatosFolder);
             var redesSociaisDirectory = Path.Combine(BasePath, csvSettings.RedesSociaisFolder);
+            var despesasDirectory = Path.Combine(BasePath, csvSettings.DespesaCandidatoFolder);
+            var receitasDirectory = Path.Combine(BasePath, csvSettings.ReceitaCandidatoFolder);
 
-            await ParseFolder(candidatosDirectory, candidatoParserService);
-            await ParseFolder(bensCandidatosDirectory, bemCandidatoParserService);
-            await ParseFolder(redesSociaisDirectory, redeSocialParserService);
+            //await ParseFolder(candidatosDirectory, candidatoParserService);
+            //await ParseFolder(bensCandidatosDirectory, bemCandidatoParserService);
+            //await ParseFolder(redesSociaisDirectory, redeSocialParserService);
+            await ParseFolder(despesasDirectory, despesaParserService);
+            await ParseFolder(receitasDirectory, receitaParserService);
 
             logger.LogInformation("ParseFullDataAsync - Full data parsing completed!");
         }

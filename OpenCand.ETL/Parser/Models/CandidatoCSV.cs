@@ -11,6 +11,9 @@ namespace OpenCand.Parser.Models
         [Name("TP_ABRANGENCIA")]
         public string TipoAbrangencia { get; set; }
 
+        [Name("NR_TURNO")]
+        public string Turno { get; set; }
+
         [Name("SG_UF")]
         public string SiglaUF { get; set; }
 

@@ -22,6 +22,11 @@ namespace OpenCand.API.Controllers
         [EnableRateLimiting(RateLimitingConfig.CandidatoSearchPolicy)]
         public async Task<CandidatoSearchResult> CandidatoSearch([FromQuery] string q)
         {
+            if (string.IsNullOrEmpty(q) || q.Length == 1)
+            {
+                throw new ArgumentException("Query parameter 'q' cannot be null/empty.", nameof(q));
+            }
+
             return await openCandService.SearchCandidatosAsync(q);
         }
 
@@ -51,6 +56,18 @@ namespace OpenCand.API.Controllers
             var randomWait = rnd.Next(1000, 3000);
             await Task.Delay(randomWait);
             return await openCandService.GetCandidatoCpfById(id);
+        }
+
+        [HttpGet("{id}/despesas")]
+        public async Task<DespesasResult> GetCandidatoDespesas([FromRoute] Guid id)
+        {
+            return await openCandService.GetDespesasByIdAndYear(id);
+        }
+
+        [HttpGet("{id}/receitas")]
+        public async Task<ReceitaResult> GetCandidatoReceitas([FromRoute] Guid id)
+        {
+            return await openCandService.GetReceitasByIdAndYear(id);
         }
     }
 }
