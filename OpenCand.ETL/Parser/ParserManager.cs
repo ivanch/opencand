@@ -58,9 +58,9 @@ namespace OpenCand.Parser
             var despesasDirectory = Path.Combine(BasePath, csvSettings.DespesaCandidatoFolder);
             var receitasDirectory = Path.Combine(BasePath, csvSettings.ReceitaCandidatoFolder);
 
-            //await ParseFolder(candidatosDirectory, candidatoParserService);
-            //await ParseFolder(bensCandidatosDirectory, bemCandidatoParserService);
-            //await ParseFolder(redesSociaisDirectory, redeSocialParserService);
+            await ParseFolder(candidatosDirectory, candidatoParserService);
+            await ParseFolder(bensCandidatosDirectory, bemCandidatoParserService);
+            await ParseFolder(redesSociaisDirectory, redeSocialParserService);
             await ParseFolder(despesasDirectory, despesaParserService);
             await ParseFolder(receitasDirectory, receitaParserService);
 
