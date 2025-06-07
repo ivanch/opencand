@@ -28,7 +28,7 @@ OpenCand is built using:
 | Bem Candidato     | 2022 | ✅       |
 | Despesas/Receitas | 2022 | ✅       |
 | Rede Social       | 2022 | ✅       |
-| Fotos             | 2022 | ❌       |
+| Fotos             | 2022 | ✅       |
 | -                 | -    | -         |
 | Candidatos        | 2020 | ✅       |
 | Bem Candidato     | 2020 | ✅       |
