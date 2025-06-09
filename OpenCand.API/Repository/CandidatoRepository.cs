@@ -19,7 +19,7 @@ namespace OpenCand.Repository
                 FROM candidato c
                 WHERE c.apelido  % @q
                 OR c.nome     % @q
-                ORDER BY sim DESC, length(c.nome) ASC
+                ORDER BY c.popularidade DESC, sim DESC, length(c.nome) ASC
                 LIMIT 10;
             ", new { q = query })).AsList();
         }
