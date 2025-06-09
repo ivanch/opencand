@@ -12,31 +12,16 @@ namespace OpenCand.Repository
 
         public async Task<List<Candidato>> SearchCandidatosAsync(string query)
         {
-            using (var connection = new NpgsqlConnection(ConnectionString))
-            {
-                return (await connection.QueryAsync<Candidato>(@"
-                    SELECT *, 
-                          CASE
-                            WHEN lower(apelido) = lower(@query) THEN 0              -- apelido Exact match (case-insensitive)
-                            WHEN lower(apelido) LIKE lower(@query) || '%' THEN 1    -- apelido Starts with match (case-insensitive)
-                            WHEN lower(apelido) LIKE '%' || lower(@query) THEN 2    -- apelido Contains anywhere match (case-insensitive)
-                            WHEN lower(nome) = lower(@query) THEN 0                 -- nome Exact match (case-insensitive)
-                            WHEN lower(nome) LIKE lower(@query) || '%' THEN 1       -- nome Starts with match (case-insensitive)
-                            WHEN lower(nome) LIKE '%' || lower(@query) THEN 2       -- nome Contains anywhere match (case-insensitive)
-                            WHEN cpf = @query THEN 0                                -- cpf Exact match for CPF
-                            WHEN cpf LIKE @query || '%' THEN 1                      -- cpf Starts with match for CPF
-                            WHEN cpf LIKE '%' || @query THEN 2                      -- cpf Contains anywhere match for CPF
-                            ELSE 3
-                          END AS name_rank
-                    FROM candidato
-                    WHERE apelido ILIKE '%' || @query || '%' OR
-                          nome ILIKE '%' || @query || '%' OR
-                          cpf ILIKE '%' || @query || '%'
-                    ORDER BY name_rank,
-                            length(nome) ASC
-                    LIMIT 10;",
-                    new { query })).AsList();
-            }
+            using var connection = new NpgsqlConnection(ConnectionString);
+            return (await connection.QueryAsync<Candidato>(@"
+                SELECT c.*,
+                    GREATEST(similarity(c.apelido, @q), similarity(c.nome, @q)) AS sim
+                FROM candidato c
+                WHERE c.apelido  % @q
+                OR c.nome     % @q
+                ORDER BY sim DESC, length(c.nome) ASC
+                LIMIT 10;
+            ", new { q = query })).AsList();
         }
 
         public async Task<Candidato?> GetCandidatoAsync(Guid idcandidato)
