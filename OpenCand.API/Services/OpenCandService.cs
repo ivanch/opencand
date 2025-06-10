@@ -40,6 +40,13 @@ namespace OpenCand.API.Services
             return await openCandRepository.GetOpenCandStatsAsync();
         }
 
+        public async Task<DataAvailabilityStats> GetDataAvailabilityStatsAsync()
+        {
+            var stats = await openCandRepository.GetDataAvailabilityAsync();
+
+            return stats;
+        }
+
         public async Task<CandidatoSearchResult> SearchCandidatosAsync(string query)
         {
             return new CandidatoSearchResult()

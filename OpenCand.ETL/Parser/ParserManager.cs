@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenCand.Config;
+using OpenCand.ETL.Services;
 using OpenCand.Parser.Models;
 using OpenCand.Parser.Services;
 
@@ -18,6 +19,8 @@ namespace OpenCand.Parser
         private readonly CsvParserService<DespesasCSV> despesaParserService;
         private readonly CsvParserService<ReceitasCSV> receitaParserService;
 
+        private readonly DespesaReceitaService despesaReceitaService;
+
         private readonly string BasePath;
 
         public ParserManager(
@@ -28,7 +31,8 @@ namespace OpenCand.Parser
             CsvParserService<BemCandidatoCSV> bemCandidatoParserService,
             CsvParserService<RedeSocialCSV> redeSocialParserService,
             CsvParserService<DespesasCSV> despesaParserService,
-            CsvParserService<ReceitasCSV> receitaParserService)
+            CsvParserService<ReceitasCSV> receitaParserService,
+            DespesaReceitaService despesaReceitaService)
         {
             this.logger = logger;
             this.csvSettings = csvSettings.Value;
@@ -38,6 +42,7 @@ namespace OpenCand.Parser
             this.redeSocialParserService = redeSocialParserService;
             this.despesaParserService = despesaParserService;
             this.receitaParserService = receitaParserService;
+            this.despesaReceitaService = despesaReceitaService;
 
             // Get the base path from either SampleFolder in csvSettings or the BasePath in configuration
             BasePath = configuration.GetValue<string>("BasePath") ?? string.Empty;
@@ -61,7 +66,10 @@ namespace OpenCand.Parser
             await ParseFolder(candidatosDirectory, candidatoParserService);
             await ParseFolder(bensCandidatosDirectory, bemCandidatoParserService);
             await ParseFolder(redesSociaisDirectory, redeSocialParserService);
+
+            await despesaReceitaService.DeleteDespesaAsync();
             await ParseFolder(despesasDirectory, despesaParserService);
+            await despesaReceitaService.DeleteReceitaAsync();
             await ParseFolder(receitasDirectory, receitaParserService);
 
             logger.LogInformation("ParseFullDataAsync - Full data parsing completed!");

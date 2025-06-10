@@ -135,5 +135,21 @@ namespace OpenCand.Repository
                 });
             }
         }
+
+        public async Task DeleteDespesaAsync()
+        {
+            using (var connection = new NpgsqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync("DELETE FROM despesas_candidato;");
+            }
+        }
+
+        public async Task DeleteReceitaAsync()
+        {
+            using (var connection = new NpgsqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync("DELETE FROM receitas_candidato;");
+            }
+        }
     }
 }

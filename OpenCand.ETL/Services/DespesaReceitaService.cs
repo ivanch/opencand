@@ -50,5 +50,15 @@ namespace OpenCand.ETL.Services
             await despesaReceitaRepository.AddReceitaAsync(receita);
         }
 
+        public async Task DeleteDespesaAsync()
+        {
+            await despesaReceitaRepository.DeleteDespesaAsync();
+        }
+
+        public async Task DeleteReceitaAsync()
+        {
+            await despesaReceitaRepository.DeleteReceitaAsync();
+        }
+
     }
 }
