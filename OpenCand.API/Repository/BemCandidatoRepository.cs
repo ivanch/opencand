@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using Microsoft.Extensions.Caching.Memory;
 using Npgsql;
 using OpenCand.Core.Models;
 
@@ -6,7 +7,7 @@ namespace OpenCand.Repository
 {
     public class BemCandidatoRepository : BaseRepository
     {
-        public BemCandidatoRepository(IConfiguration configuration) : base(configuration)
+        public BemCandidatoRepository(IConfiguration configuration, IMemoryCache? cache = null) : base(configuration, cache)
         {
         }
 

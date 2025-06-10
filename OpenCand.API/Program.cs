@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.FileProviders;
 using OpenCand.API.Config;
 using OpenCand.API.Repository;
@@ -51,15 +52,21 @@ namespace OpenCand.API
 
 
             app.Run();
-        }
-
-        private static void SetupServices(WebApplicationBuilder builder)
+        }        private static void SetupServices(WebApplicationBuilder builder)
         {
             builder.Services.Configure<FotosSettings>(builder.Configuration.GetSection("FotosSettings"));
-            builder.Services.AddScoped<OpenCandRepository>();
-            builder.Services.AddScoped<CandidatoRepository>();
-            builder.Services.AddScoped<BemCandidatoRepository>();
-            builder.Services.AddScoped<DespesaReceitaRepository>();
+            builder.Services.AddMemoryCache();
+            
+            // Register repositories with IMemoryCache
+            builder.Services.AddScoped<OpenCandRepository>(provider =>
+                new OpenCandRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
+            builder.Services.AddScoped<CandidatoRepository>(provider =>
+                new CandidatoRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
+            builder.Services.AddScoped<BemCandidatoRepository>(provider =>
+                new BemCandidatoRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
+            builder.Services.AddScoped<DespesaReceitaRepository>(provider =>
+                new DespesaReceitaRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
+            
             builder.Services.AddScoped<OpenCandService>();
         }
     }

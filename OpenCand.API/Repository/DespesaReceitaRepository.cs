@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using OpenCand.Core.Models;
@@ -7,7 +8,7 @@ namespace OpenCand.Repository
 {
     public class DespesaReceitaRepository : BaseRepository
     {
-        public DespesaReceitaRepository(IConfiguration configuration) : base(configuration)
+        public DespesaReceitaRepository(IConfiguration configuration, IMemoryCache? cache = null) : base(configuration, cache)
         {
         }
 
