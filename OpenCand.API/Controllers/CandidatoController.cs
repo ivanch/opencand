@@ -30,6 +30,15 @@ namespace OpenCand.API.Controllers
             return await openCandService.SearchCandidatosAsync(q);
         }
 
+        [HttpGet("random")]
+        public async Task<object> GetRandomCandidatoId()
+        {
+            return new
+            {
+                idCandidato = await openCandService.GetRandomCandidato()
+            };
+        }
+
         [HttpGet("{id}")]
         public async Task<Candidato> GetCandidatoById([FromRoute] Guid id)
         {

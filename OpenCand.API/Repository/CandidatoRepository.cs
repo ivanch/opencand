@@ -101,5 +101,16 @@ namespace OpenCand.Repository
                 return (await connection.QueryAsync<CandidatoExt>(query, new { idcandidato })).AsList();
             }
         }
+
+        public async Task<Guid?> GetRandomCandidatoIdAsync()
+        {
+            using var connection = new NpgsqlConnection(ConnectionString);
+            return await connection.QueryFirstOrDefaultAsync<Guid?>(@"
+                SELECT idcandidato
+                FROM candidato
+                ORDER BY RANDOM()
+                LIMIT 1;
+            ");
+        }
     }
 }

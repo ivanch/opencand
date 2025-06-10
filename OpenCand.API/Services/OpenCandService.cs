@@ -55,6 +55,11 @@ namespace OpenCand.API.Services
             };
         }
 
+        public async Task<Guid?> GetRandomCandidato()
+        {
+            return await candidatoRepository.GetRandomCandidatoIdAsync();
+        }
+
         public async Task<Candidato> GetCandidatoAsync(Guid idcandidato)
         {
             var result = await candidatoRepository.GetCandidatoAsync(idcandidato);
