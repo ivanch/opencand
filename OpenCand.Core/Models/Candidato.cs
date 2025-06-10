@@ -20,13 +20,13 @@ namespace OpenCand.Core.Models
 
         public string Sexo { get; set; }
 
-        public string EstadoCivil { get; set; }
+        public string Localidade { get; set; }
 
-        public string Escolaridade { get; set; }
-
-        public string Ocupacao { get; set; }
+        public int Ultimoano { get; set; }
 
         public List<CandidatoMapping> Eleicoes { get; set; }
+
+        public List<CandidatoExt> CandidatoExt { get; set; }
 
         // API ONLY
         public string FotoUrl { get; set; }
@@ -37,7 +37,6 @@ namespace OpenCand.Core.Models
         public Guid IdCandidato { get; set; }
         public string Cpf { get; set; }
         public string Nome { get; set; }
-        public string Apelido { get; set; }
         public string SqCandidato { get; set; }
         public int Ano { get; set; }
         public string Turno { get; set; }
@@ -50,6 +49,17 @@ namespace OpenCand.Core.Models
         public string Sgpartido { get; set; }
 
         public Partido? Partido { get; set; } // Nullable to allow for candidates without a party
+    }
+
+    public class CandidatoExt
+    {
+        public Guid IdCandidato { get; set; }
+        public int Ano { get; set; }
+        public string Apelido { get; set; }
+        public string Email { get; set; }
+        public string EstadoCivil { get; set; }
+        public string Escolaridade { get; set; }
+        public string Ocupacao { get; set; }
     }
 
     public class RedeSocial

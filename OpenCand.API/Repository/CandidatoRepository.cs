@@ -90,5 +90,16 @@ namespace OpenCand.Repository
                 return (await connection.QueryAsync<RedeSocial>(query, new { idcandidato })).AsList();
             }
         }
+
+        public async Task<List<CandidatoExt>?> GetCandidatoExtById(Guid idcandidato)
+        {
+            using (var connection = new NpgsqlConnection(ConnectionString))
+            {
+                var query = @"
+                    SELECT * FROM candidato_ext
+                    WHERE idcandidato = @idcandidato";
+                return (await connection.QueryAsync<CandidatoExt>(query, new { idcandidato })).AsList();
+            }
+        }
     }
 }

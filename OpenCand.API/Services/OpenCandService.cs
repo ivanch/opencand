@@ -59,11 +59,7 @@ namespace OpenCand.API.Services
         {
             var result = await candidatoRepository.GetCandidatoAsync(idcandidato);
             var eleicoes = await candidatoRepository.GetCandidatoMappingById(idcandidato);
-
-            foreach (var eleicao in eleicoes)
-            {
-                eleicao.Partido = await candidatoRepository.GetPartidoBySigla(eleicao.Sgpartido);
-            }
+            var candidatoExt = await candidatoRepository.GetCandidatoExtById(idcandidato);
 
             if (result == null)
             {
@@ -74,10 +70,16 @@ namespace OpenCand.API.Services
                 throw new KeyNotFoundException($"CandidatoMapping for ID {idcandidato} not found.");
             }
 
+            foreach (var eleicao in eleicoes)
+            {
+                eleicao.Partido = await candidatoRepository.GetPartidoBySigla(eleicao.Sgpartido);
+            }
+
             var lastEleicao = eleicoes.OrderByDescending(e => e.Ano).First();
 
             result.FotoUrl = $"{fotoSettings.ApiBasePath}/foto_cand{lastEleicao.Ano}_{lastEleicao.SiglaUF}_div/F{lastEleicao.SiglaUF}{lastEleicao.SqCandidato}_div.jpg";
             result.Eleicoes = eleicoes.OrderByDescending(e => e.Ano).ToList();
+            result.CandidatoExt = candidatoExt.OrderByDescending(ce => ce.Ano).ToList();
 
             return result;
         }

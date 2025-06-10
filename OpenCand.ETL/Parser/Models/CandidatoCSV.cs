@@ -36,10 +36,10 @@ namespace OpenCand.Parser.Models
         public string Apelido { get; set; }
 
         [Name("NR_CPF_CANDIDATO")]
-        public string CPFCandidato { get; set; }
+        public string? CPFCandidato { get; set; }
 
         [Name("DS_EMAIL", "NM_EMAIL")]
-        public string Email { get; set; }
+        public string? Email { get; set; }
 
         [Name("DT_NASCIMENTO")]
         public string DataNascimento { get; set; }
@@ -57,7 +57,7 @@ namespace OpenCand.Parser.Models
         public string GrauInstrucao { get; set; }
 
         [Name("DS_SIT_TOT_TURNO")]
-        public string SituacaoTurno { get; set; }
+        public string? SituacaoTurno { get; set; }
 
         [Name("NR_PARTIDO")]
         public int NumeroPartido { get; set; }

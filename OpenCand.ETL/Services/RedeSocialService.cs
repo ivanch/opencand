@@ -30,7 +30,7 @@ namespace OpenCand.Services
             }
 
             redeSocial.IdCandidato = candidato.IdCandidato;
-            redeSocial.Rede = GetRedeSocialType(redeSocial.Link);
+            redeSocial.Rede = GetRedeSocialType(redeSocial.Link.Trim());
 
             await redeSocialRepository.AddRedeSocialAsync(redeSocial);
         }

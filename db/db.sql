@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS bem_candidato CASCADE;
 DROP TABLE IF EXISTS candidato_mapping CASCADE;
+DROP TABLE IF EXISTS candidato_ext CASCADE;
 DROP TABLE IF EXISTS rede_social CASCADE;
 DROP TABLE IF EXISTS candidato CASCADE;
 DROP TABLE IF EXISTS partido CASCADE;
@@ -10,14 +11,12 @@ CREATE TABLE candidato (
     idcandidato UUID NOT NULL PRIMARY KEY,
     cpf VARCHAR(11),
     nome VARCHAR(255) NOT NULL,
-    apelido VARCHAR(255),
     datanascimento TIMESTAMPTZ,
-    email TEXT,
     sexo CHAR(15),
-    estadocivil VARCHAR(50),
-    escolaridade VARCHAR(50),
-    ocupacao VARCHAR(150),
-    popularidade BIGINT DEFAULT 0,
+    apelido VARCHAR(255),
+    localidade VARCHAR(100),
+    ultimoano INT,
+    popularidade BIGINT DEFAULT 0
 );
 CREATE INDEX idx_candidato_nome ON candidato (nome);
 CREATE INDEX idx_candidato_apelido ON candidato (apelido);
@@ -30,7 +29,6 @@ CREATE TABLE candidato_mapping (
     idcandidato UUID NOT NULL,
     cpf VARCHAR(11),
     nome VARCHAR(255) NOT NULL,
-    apelido VARCHAR(255),
     sqcandidato VARCHAR(50) NOT NULL,
     turno VARCHAR(2) NOT NULL,
     ano INT NOT NULL,
@@ -44,11 +42,24 @@ CREATE TABLE candidato_mapping (
     CONSTRAINT pk_candidato_mapping PRIMARY KEY (idcandidato, ano, siglauf, nomeue, cargo, nrcandidato, resultado),
     CONSTRAINT fk_candidato_mapping_candidato FOREIGN KEY (idcandidato) REFERENCES candidato(idcandidato) ON DELETE CASCADE ON UPDATE CASCADE
 );
+CREATE INDEX idx_candidato_mapping_idcandidato ON candidato_mapping (idcandidato);
 CREATE INDEX idx_candidato_mapping_cpf ON candidato_mapping (cpf);
 CREATE INDEX idx_candidato_mapping_nome ON candidato_mapping (nome);
-CREATE INDEX idx_candidato_mapping_apelido ON candidato_mapping (apelido);
 CREATE INDEX idx_candidato_mapping_ano ON candidato_mapping (ano);
 CREATE INDEX idx_candidato_mapping_sqcandidato ON candidato_mapping (sqcandidato);
+
+CREATE TABLE candidato_ext (
+    idcandidato UUID NOT NULL,
+    ano INT NOT NULL,
+    apelido VARCHAR(255),
+    email TEXT,
+    estadocivil VARCHAR(50),
+    escolaridade VARCHAR(50),
+    ocupacao TEXT,
+    CONSTRAINT pk_candidato_ext PRIMARY KEY (idcandidato, ano)
+);
+CREATE INDEX idx_candidato_ext_idcandidato ON candidato_ext (idcandidato);
+CREATE INDEX idx_candidato_ext_ano ON candidato_ext (ano);
 
 ---- Table for storing assets of candidates
 CREATE TABLE bem_candidato (
@@ -138,3 +149,11 @@ CREATE INDEX idx_receitas_candidato_idcandidato ON receitas_candidato (idcandida
 CREATE INDEX idx_receitas_candidato_ano ON receitas_candidato (ano);
 CREATE INDEX idx_receitas_candidato_sqcandidato ON receitas_candidato (sqcandidato);
 CREATE INDEX idx_receitas_candidato_sgpartido ON receitas_candidato (sgpartido);
+
+
+
+-- Search function
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX idx_candidato_nome_trgm    ON candidato USING GIN (nome    gin_trgm_ops);
+CREATE INDEX idx_candidato_apelido_trgm ON candidato USING GIN (apelido gin_trgm_ops);
+CREATE INDEX idx_candidato_cpf_trgm     ON candidato USING GIN (cpf     gin_trgm_ops);

@@ -16,18 +16,17 @@ namespace OpenCand.Repository
             using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(@"
-                    INSERT INTO candidato (idcandidato, cpf, nome, apelido, datanascimento, email, sexo, estadocivil, escolaridade, ocupacao)
-                    VALUES (@idcandidato, @cpf, @nome, @apelido, @datanascimento, @email, @sexo, @estadocivil, @escolaridade, @ocupacao)
+                    INSERT INTO candidato (idcandidato, cpf, nome, apelido, datanascimento, sexo, ultimoano, localidade)
+                    VALUES (@idcandidato, @cpf, @nome, @apelido, @datanascimento, @sexo, @ultimoano, @localidade)
                     ON CONFLICT (idcandidato) DO UPDATE SET
                         cpf = EXCLUDED.cpf,
                         nome = EXCLUDED.nome,
+                        apelido = EXCLUDED.apelido,
                         datanascimento = EXCLUDED.datanascimento,
-                        email = EXCLUDED.email,
                         sexo = EXCLUDED.sexo,
-                        estadocivil = EXCLUDED.estadocivil,
-                        escolaridade = EXCLUDED.escolaridade,
-                        ocupacao = EXCLUDED.ocupacao,
-                        apelido = EXCLUDED.apelido;",
+                        localidade = EXCLUDED.localidade,
+                        ultimoano = EXCLUDED.ultimoano
+                    WHERE candidato.ultimoano IS NULL OR EXCLUDED.ultimoano > candidato.ultimoano;",
                     new
                     {
                         idcandidato = candidato.IdCandidato,
@@ -35,11 +34,9 @@ namespace OpenCand.Repository
                         nome = candidato.Nome,
                         apelido = candidato.Apelido,
                         datanascimento = candidato.DataNascimento,
-                        email = candidato.Email,
                         sexo = candidato.Sexo,
-                        estadocivil = candidato.EstadoCivil,
-                        escolaridade = candidato.Escolaridade,
-                        ocupacao = candidato.Ocupacao
+                        localidade = candidato.Localidade,
+                        ultimoano = candidato.Ultimoano
                     });
             }
         }
@@ -49,15 +46,14 @@ namespace OpenCand.Repository
             using (var connection = new NpgsqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(@"
-                    INSERT INTO candidato_mapping (idcandidato, cpf, nome, apelido, sqcandidato, ano, turno, tipoeleicao, siglauf, nomeue, cargo, nrcandidato, sgpartido, resultado)
-                    VALUES (@idcandidato, @cpf, @nome, @apelido, @sqcandidato, @ano, @turno, @tipoeleicao, @siglauf, @nomeue, @cargo, @nrcandidato, @sgpartido, @resultado)
+                    INSERT INTO candidato_mapping (idcandidato, cpf, nome, sqcandidato, ano, turno, tipoeleicao, siglauf, nomeue, cargo, nrcandidato, sgpartido, resultado)
+                    VALUES (@idcandidato, @cpf, @nome, @sqcandidato, @ano, @turno, @tipoeleicao, @siglauf, @nomeue, @cargo, @nrcandidato, @sgpartido, @resultado)
                     ON CONFLICT DO NOTHING;",
                     new
                     {
                         idcandidato = candidatoMapping.IdCandidato,
                         cpf = candidatoMapping.Cpf,
                         nome = candidatoMapping.Nome,
-                        apelido = candidatoMapping.Apelido,
                         sqcandidato = candidatoMapping.SqCandidato,
                         ano = candidatoMapping.Ano,
                         turno = candidatoMapping.Turno,
@@ -68,6 +64,32 @@ namespace OpenCand.Repository
                         cargo = candidatoMapping.Cargo,
                         sgpartido = candidatoMapping.Partido?.Sigla,
                         resultado = candidatoMapping.Resultado
+                    });
+            }
+        }
+
+        public async Task AddCandidatoExtAsync(CandidatoExt candidatoExt)
+        {
+            using (var connection = new NpgsqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(@"
+                    INSERT INTO candidato_ext (idcandidato, ano, apelido, email, estadocivil, escolaridade, ocupacao)
+                    VALUES (@idcandidato, @ano, @apelido, @email, @estadocivil, @escolaridade, @ocupacao)
+                    ON CONFLICT (idcandidato, ano) DO UPDATE SET
+                        apelido = EXCLUDED.apelido,
+                        email = EXCLUDED.email,
+                        estadocivil = EXCLUDED.estadocivil,
+                        escolaridade = EXCLUDED.escolaridade,
+                        ocupacao = EXCLUDED.ocupacao;",
+                    new
+                    {
+                        idcandidato = candidatoExt.IdCandidato,
+                        ano = candidatoExt.Ano,
+                        apelido = candidatoExt.Apelido,
+                        email = candidatoExt.Email,
+                        estadocivil = candidatoExt.EstadoCivil,
+                        escolaridade = candidatoExt.Escolaridade,
+                        ocupacao = candidatoExt.Ocupacao
                     });
             }
         }

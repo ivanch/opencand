@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenCand.Core.Models;
 using OpenCand.ETL.Contracts;
+using OpenCand.ETL.Extensions;
 using OpenCand.Parser.Models;
 using OpenCand.Services;
 
@@ -22,62 +23,80 @@ namespace OpenCand.ETL.Parser.ParserServices
 
         public async Task ParseObject(CandidatoCSV record)
         {
-            if (string.IsNullOrWhiteSpace(record.CPFCandidato) || record.CPFCandidato.Length <= 3)
+            if (record.CPFCandidato?.Length <= 3 || record.CPFCandidato.IsNullOrEmpty())
             {
                 record.CPFCandidato = null; // Handle null/empty/whitespace CPF
             }
+            else
+            {
+                record.CPFCandidato = record.CPFCandidato.Trim();
+            }
 
-            if (record.NomeCandidato == "NÃO DIVULGÁVEL" ||
-            string.IsNullOrEmpty(record.NomeCandidato) ||
-                record.NomeCandidato == "#NULO")
+            if (record.Apelido.IsNullOrEmpty())
+            {
+                record.Apelido = null;
+            }
+
+            if (record.NomeCandidato.IsNullOrEmpty())
             {
                 logger.LogCritical($"ParseCandidatosAsync - Candidate with id {record.SequencialCandidato} with invalid name, skipping...");
                 return; // Skip candidates with invalid name
             }
 
-            if (string.IsNullOrWhiteSpace(record.Apelido) ||
-                record.Apelido.Contains("#NUL") ||
-                record.Apelido.Contains("NULO#") ||
-                record.Apelido.Contains("#NE"))
+            if (record.Apelido.IsNullOrEmpty())
             {
                 record.Apelido = null;
+            }
+
+            if (record.SituacaoTurno.IsNullOrEmpty())
+            {
+                record.SituacaoTurno = null;
             }
 
             var candidato = new Candidato
             {
                 Cpf = record.CPFCandidato,
                 SqCandidato = record.SequencialCandidato,
-                Nome = record.NomeCandidato,
-                Apelido = record.Apelido,
-                Email = record.Email.Contains("@") ? record.Email : null,
-                Sexo = record.Genero,
-                EstadoCivil = record.EstadoCivil,
-                Escolaridade = record.GrauInstrucao,
-                Ocupacao = record.Ocupacao,
+                Nome = record.NomeCandidato.Trim(),
+                Apelido = record.Apelido?.Trim(),
+                Sexo = record.Genero.Trim(),
+                Localidade = record.NomeUE.Trim(),
+                Ultimoano = record.AnoEleicao,
                 Eleicoes = new List<CandidatoMapping>()
-                            {
-                                new CandidatoMapping
-                                {
-                                    Cpf = record.CPFCandidato,
-                                    Nome = record.NomeCandidato,
-                                    Apelido = record.Apelido,
-                                    SqCandidato = record.SequencialCandidato,
-                                    Ano = record.AnoEleicao,
-                                    Turno = record.Turno,
-                                    TipoEleicao = record.TipoAbrangencia,
-                                    NomeUE = record.NomeUE,
-                                    SiglaUF = record.SiglaUF,
-                                    Cargo = record.DescricaoCargo,
-                                    NrCandidato = record.NumeroCandidato,
-                                    Resultado = record.SituacaoTurno,
-                                    Partido = new Partido
-                                    {
-                                        Sigla = record.SiglaPartido,
-                                        Nome = record.NomePartido,
-                                        Numero = record.NumeroPartido,
-                                    }
-                                }
-                            }
+                {
+                    new CandidatoMapping
+                    {
+                        Cpf = record.CPFCandidato,
+                        Nome = record.NomeCandidato.Trim(),
+                        SqCandidato = record.SequencialCandidato.Trim(),
+                        Ano = record.AnoEleicao,
+                        Turno = record.Turno.Trim(),
+                        TipoEleicao = record.TipoAbrangencia.Trim(),
+                        NomeUE = record.NomeUE.Trim(),
+                        SiglaUF = record.SiglaUF.Trim(),
+                        Cargo = record.DescricaoCargo.Trim(),
+                        NrCandidato = record.NumeroCandidato.Trim(),
+                        Resultado = record.SituacaoTurno?.Trim() ?? "-",
+                        Partido = new Partido
+                        {
+                            Sigla = record.SiglaPartido.Trim(),
+                            Nome = record.NomePartido.Trim(),
+                            Numero = record.NumeroPartido,
+                        }
+                    }
+                },
+                CandidatoExt = new List<CandidatoExt>()
+                {
+                    new CandidatoExt
+                    {
+                        Apelido = record.Apelido?.Trim(),
+                        EstadoCivil = record.EstadoCivil.Trim(),
+                        Escolaridade = record.GrauInstrucao.Trim(),
+                        Ocupacao = record.Ocupacao.Trim(),
+                        Ano = record.AnoEleicao,
+                        Email = record.Email.IsNullOrEmpty() ? null : record.Email.Trim()
+                    }
+                }
             };
 
             if (!string.IsNullOrEmpty(record.DataNascimento) &&

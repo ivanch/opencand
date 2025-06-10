@@ -17,7 +17,7 @@ namespace OpenCand.Services
 
         public async Task AddCandidatoAsync(Candidato candidato)
         {
-            if (candidato == null)
+            if (candidato == null || candidato.CandidatoExt == null || candidato.Eleicoes == null)
             {
                 throw new ArgumentNullException(nameof(candidato), "Candidato cannot be null");
             }
@@ -28,6 +28,7 @@ namespace OpenCand.Services
             }
 
             var candidatoMapping = candidato.Eleicoes.First();
+            var candidatoExt = candidato.CandidatoExt.First();
 
             // Add partido data
             if (candidatoMapping.Partido != null)
@@ -52,18 +53,18 @@ namespace OpenCand.Services
                 candidato.IdCandidato = existingCandidato.IdCandidato;
                 candidato.Cpf = GetNonEmptyString(existingCandidato.Cpf, candidato.Cpf);
                 candidato.Email = GetNonEmptyString(existingCandidato.Email, candidato.Email);
-                candidato.EstadoCivil = GetNonEmptyString(existingCandidato.EstadoCivil, candidato.EstadoCivil);
                 candidato.Apelido = GetNonEmptyString(existingCandidato.Apelido, candidato.Apelido);
-                candidato.Escolaridade = GetNonEmptyString(existingCandidato.Escolaridade, candidato.Escolaridade);
-                candidato.Ocupacao = GetNonEmptyString(existingCandidato.Ocupacao, candidato.Ocupacao);
                 candidato.Sexo = GetNonEmptyString(existingCandidato.Sexo, candidato.Sexo);
 
                 candidatoMapping.IdCandidato = candidato.IdCandidato;
                 candidatoMapping.Cpf = GetNonEmptyString(candidato.Cpf, candidatoMapping.Cpf);
 
+                candidatoExt.IdCandidato = candidato.IdCandidato;
+
                 // Update the entries for the existing candidate
                 await candidatoRepository.AddCandidatoAsync(candidato);
                 await candidatoRepository.AddCandidatoMappingAsync(candidatoMapping);
+                await candidatoRepository.AddCandidatoExtAsync(candidatoExt);
                 return;
             }
 
@@ -79,10 +80,12 @@ namespace OpenCand.Services
             if (existingMapping != null)
             {
                 candidato.IdCandidato = existingMapping.IdCandidato;
+                candidatoExt.IdCandidato = existingMapping.IdCandidato;
+
                 candidato.Cpf = GetNonEmptyString(existingMapping.Cpf, candidato.Cpf);
-                candidato.Apelido = GetNonEmptyString(existingMapping.Apelido, candidato.Apelido);
+
                 await candidatoRepository.AddCandidatoAsync(candidato);
-                
+                await candidatoRepository.AddCandidatoExtAsync(candidatoExt);
                 return;
             }
 
@@ -94,8 +97,11 @@ namespace OpenCand.Services
             candidatoMapping.Cpf = candidato.Cpf;
             candidatoMapping.Nome = candidato.Nome;
 
+            candidatoExt.IdCandidato = candidato.IdCandidato;
+
             await candidatoRepository.AddCandidatoAsync(candidato);
             await candidatoRepository.AddCandidatoMappingAsync(candidatoMapping);
+            await candidatoRepository.AddCandidatoExtAsync(candidatoExt);
         }
 
         public string GetNonEmptyString(string? value1, string? value2)
