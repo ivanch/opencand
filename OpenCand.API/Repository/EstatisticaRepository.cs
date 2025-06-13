@@ -78,10 +78,14 @@ namespace OpenCand.API.Repository
 
         public async Task<List<GetValueSumResponse>> GetValueSum(string query, Dictionary<string, object>? parameters = null)
         {
-            using (var connection = new NpgsqlConnection(ConnectionString))
+            string cacheKey = GenerateCacheKey(query.GetHashCode().ToString());
+            return await GetOrSetCacheAsync(cacheKey, async () =>
             {
-                return (await connection.QueryAsync<GetValueSumResponse>(query, parameters)).AsList();
-            }
+                using (var connection = new NpgsqlConnection(ConnectionString))
+                {
+                    return (await connection.QueryAsync<GetValueSumResponse>(query, parameters)).AsList();
+                }
+            }) ?? new List<GetValueSumResponse>();
         }
     }
 }
