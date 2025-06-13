@@ -5,7 +5,8 @@ using OpenCand.Core.Models;
 using OpenCand.Repository;
 
 namespace OpenCand.API.Repository
-{    public class OpenCandRepository : BaseRepository
+{    
+    public class OpenCandRepository : BaseRepository
     {
         private readonly IConfiguration configuration;
 
@@ -35,7 +36,9 @@ namespace OpenCand.API.Repository
             });
             
             return result ?? new OpenCandStats();
-        }        public async Task<DataAvailabilityStats> GetDataAvailabilityAsync()
+        }
+        
+        public async Task<DataAvailabilityStats> GetDataAvailabilityAsync()
         {
             string cacheKey = GenerateCacheKey("DataAvailabilityStats");
 

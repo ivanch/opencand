@@ -98,7 +98,7 @@ CREATE INDEX idx_partido_numero ON partido (numero);
 
 ---- Tables for storing despesas e receitas of candidacies
 CREATE TABLE despesas_candidato (
-    idreceita UUID NOT NULL DEFAULT gen_random_uuid(),
+    iddespesa UUID NOT NULL DEFAULT gen_random_uuid(),
     idcandidato UUID NOT NULL,
     ano INT NOT NULL,
     turno VARCHAR(2) NOT NULL,
@@ -115,7 +115,7 @@ CREATE TABLE despesas_candidato (
     descricao TEXT,
     origemdespesa TEXT,
     valor NUMERIC(20, 2),
-    CONSTRAINT pk_despesas_candidato PRIMARY KEY (idreceita),
+    CONSTRAINT pk_despesas_candidato PRIMARY KEY (iddespesa),
     CONSTRAINT fk_despesas_candidato_candidato FOREIGN KEY (idcandidato) REFERENCES candidato(idcandidato) ON DELETE CASCADE ON UPDATE CASCADE
 );
 CREATE INDEX idx_despesas_candidato_idcandidato ON despesas_candidato (idcandidato);

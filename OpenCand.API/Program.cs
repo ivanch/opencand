@@ -52,22 +52,21 @@ namespace OpenCand.API
 
 
             app.Run();
-        }        private static void SetupServices(WebApplicationBuilder builder)
+        }
+        
+        private static void SetupServices(WebApplicationBuilder builder)
         {
             builder.Services.Configure<FotosSettings>(builder.Configuration.GetSection("FotosSettings"));
             builder.Services.AddMemoryCache();
             
-            // Register repositories with IMemoryCache
-            builder.Services.AddScoped<OpenCandRepository>(provider =>
-                new OpenCandRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
-            builder.Services.AddScoped<CandidatoRepository>(provider =>
-                new CandidatoRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
-            builder.Services.AddScoped<BemCandidatoRepository>(provider =>
-                new BemCandidatoRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
-            builder.Services.AddScoped<DespesaReceitaRepository>(provider =>
-                new DespesaReceitaRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
-            
+            builder.Services.AddScoped(provider => new OpenCandRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
+            builder.Services.AddScoped(provider => new CandidatoRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
+            builder.Services.AddScoped(provider => new BemCandidatoRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
+            builder.Services.AddScoped(provider => new DespesaReceitaRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
+            builder.Services.AddScoped(provider => new EstatisticaRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
+
             builder.Services.AddScoped<OpenCandService>();
+            builder.Services.AddScoped<EstatisticaService>();
         }
     }
 }
