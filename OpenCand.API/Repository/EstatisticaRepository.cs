@@ -35,6 +35,7 @@ namespace OpenCand.API.Repository
                             HAVING COUNT(ano) >= 2
                         )
                         SELECT
+                            ed.idcandidato,
                             c.nome,
                             ed.anoInicial,
                             pi.valor AS patrimonioInicial,
