@@ -10,7 +10,7 @@ namespace OpenCand.Repository
         protected readonly IMemoryCache? _cache;
 
         // Default cache settings
-        protected static readonly TimeSpan DefaultCacheExpiration = TimeSpan.FromDays(7);
+        protected static readonly TimeSpan DefaultCacheExpiration = TimeSpan.MaxValue;
         protected static readonly CacheItemPriority DefaultCachePriority = CacheItemPriority.Normal;
 
         public BaseRepository(IConfiguration configuration, IMemoryCache? cache = null)
