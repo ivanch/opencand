@@ -106,9 +106,9 @@ namespace OpenCand.API.Services
             {
                 return type.ToLower() switch
                 {
-                    "bem" => "FROM bem_candidato src",
-                    "despesa" => "FROM despesas_candidato src",
-                    "receita" => "FROM receitas_candidato src",
+                    "bem" => "FROM mv_bem_candidato src",
+                    "despesa" => "FROM mv_despesas_candidato src",
+                    "receita" => "FROM mv_receitas_candidato src",
                     _ => throw new ArgumentException("Invalid type specified.")
                 };
             }
@@ -117,8 +117,8 @@ namespace OpenCand.API.Services
             {
                 return groupBy.ToLower() switch
                 {
-                    "candidato" => "JOIN candidato c ON src.idcandidato = c.idcandidato JOIN candidato_mapping cm ON src.idcandidato = cm.idcandidato AND src.ano = cm.ano",
-                    "partido" or "uf" or "cargo" => "JOIN candidato_mapping cm ON src.idcandidato = cm.idcandidato AND src.ano = cm.ano",
+                    "candidato" => "JOIN candidato c ON src.idcandidato = c.idcandidato JOIN candidato_mapping cm ON src.idcandidato = cm.idcandidato AND src.ano = cm.ano AND cm.turno = '1'",
+                    "partido" or "uf" or "cargo" => "JOIN candidato_mapping cm ON src.idcandidato = cm.idcandidato AND src.ano = cm.ano AND cm.turno = '1'",
                     _ => throw new ArgumentException("Invalid group by specified.")
                 };
             }

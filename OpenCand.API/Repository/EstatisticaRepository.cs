@@ -27,7 +27,7 @@ namespace OpenCand.API.Repository
                     return (await connection.QueryAsync<MaioresEnriquecimento>(@"
                         WITH patrimonio_anual AS (
                             SELECT idcandidato, ano, SUM(valor) AS valor_total_ano
-                            FROM bem_candidato
+                            FROM mv_bem_candidato
                             GROUP BY idcandidato, ano
                         ),
                         extremos_declaracao AS (
