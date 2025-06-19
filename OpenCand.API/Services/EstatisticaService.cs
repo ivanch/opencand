@@ -94,7 +94,7 @@ namespace OpenCand.API.Services
             {
                 return groupBy.ToLower() switch
                 {
-                    "candidato" => "SELECT src.idcandidato, c.nome, src.ano, SUM(src.valor) as valor",
+                    "candidato" => "SELECT src.idcandidato, cm.nome, src.ano, SUM(src.valor) as valor",
                     "partido" => "SELECT cm.sgpartido, src.ano, SUM(src.valor) as valor",
                     "uf" => "SELECT cm.siglauf, src.ano, SUM(src.valor) as valor",
                     "cargo" => "SELECT cm.cargo, src.ano, SUM(src.valor) as valor",
@@ -117,8 +117,8 @@ namespace OpenCand.API.Services
             {
                 return groupBy.ToLower() switch
                 {
-                    "candidato" => "JOIN candidato c ON src.idcandidato = c.idcandidato JOIN candidato_mapping cm ON src.idcandidato = cm.idcandidato AND src.ano = cm.ano AND cm.turno = '1'",
-                    "partido" or "uf" or "cargo" => "JOIN candidato_mapping cm ON src.idcandidato = cm.idcandidato AND src.ano = cm.ano AND cm.turno = '1'",
+                    "candidato" => "JOIN mv_candidato_mapping_analytics cm ON src.idcandidato = cm.idcandidato AND src.ano = cm.ano",
+                    "partido" or "uf" or "cargo" => "JOIN mv_candidato_mapping_analytics cm ON src.idcandidato = cm.idcandidato AND src.ano = cm.ano",
                     _ => throw new ArgumentException("Invalid group by specified.")
                 };
             }
@@ -147,7 +147,7 @@ namespace OpenCand.API.Services
                 if (filter.Ano.HasValue)
                 {
                     var paramName = $"ano{++_paramCounter}";
-                    conditions.Add($"src.ano = @{paramName}");
+                    conditions.Add($"cm.ano = @{paramName}");
                     _parameters[paramName] = filter.Ano.Value;
                 }
 
@@ -165,7 +165,7 @@ namespace OpenCand.API.Services
             {
                 return groupBy.ToLower() switch
                 {
-                    "candidato" => "GROUP BY src.idcandidato, c.nome, src.ano",
+                    "candidato" => "GROUP BY src.idcandidato, cm.nome, src.ano",
                     "partido" => "GROUP BY cm.sgpartido, src.ano",
                     "uf" => "GROUP BY cm.siglauf, src.ano",
                     "cargo" => "GROUP BY cm.cargo, src.ano",

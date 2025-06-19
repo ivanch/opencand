@@ -67,3 +67,26 @@ GROUP BY
     siglauf,
     cargo;
 CREATE INDEX idx_mv_receitas_candidato ON mv_receitas_candidato (ano, idcandidato, siglauf, sgpartido, cargo);
+
+---
+--- View for candidate mapping summary
+CREATE MATERIALIZED VIEW mv_candidato_mapping_analytics AS
+SELECT DISTINCT cm.idcandidato, c.nome, cm.ano, cm.turno, cm.sgpartido, cm.siglauf, cm.cargo
+FROM candidato_mapping cm
+JOIN candidato c ON cm.idcandidato = c.idcandidato
+WHERE cm.turno = '1';
+
+CREATE INDEX idx_mv_candidato_mapping_analytics ON mv_candidato_mapping_analytics (idcandidato, ano);
+
+
+-- Refresh the materialized views to ensure they are up-to-date
+REFRESH MATERIALIZED VIEW mv_bem_candidato;
+REFRESH MATERIALIZED VIEW mv_despesas_candidato;
+REFRESH MATERIALIZED VIEW mv_receitas_candidato;
+REFRESH MATERIALIZED VIEW mv_candidato_mapping_analytics;
+
+-- Force re-analyze the materialized views to update statistics
+ANALYZE mv_bem_candidato;
+ANALYZE mv_despesas_candidato;
+ANALYZE mv_receitas_candidato;
+ANALYZE mv_candidato_mapping_analytics;
