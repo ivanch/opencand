@@ -108,7 +108,7 @@ namespace OpenCand.Repository
             return await connection.QueryFirstOrDefaultAsync<Guid?>(@"
                 SELECT idcandidato
                 FROM candidato
-                ORDER BY RANDOM()
+                TABLESAMPLE SYSTEM (0.01)
                 LIMIT 1;
             ");
         }
