@@ -5,6 +5,7 @@ using OpenCand.API.Config;
 using OpenCand.API.Model;
 using OpenCand.API.Services;
 using OpenCand.Core.Models;
+using OpenCand.Core.Utils;
 
 namespace OpenCand.API.Controllers
 {
@@ -27,7 +28,11 @@ namespace OpenCand.API.Controllers
                 throw new ArgumentException("Query parameter 'q' cannot be null/empty.", nameof(q));
             }
 
-            return await openCandService.SearchCandidatosAsync(q);
+            var result = await openCandService.SearchCandidatosAsync(q);
+
+            result.Candidatos.ForEach(c => c.Cpf = CpfMasking.MaskCpf(c.Cpf));
+
+            return result;
         }
 
         [HttpGet("random")]
@@ -42,7 +47,10 @@ namespace OpenCand.API.Controllers
         [HttpGet("{id}")]
         public async Task<Candidato> GetCandidatoById([FromRoute] Guid id)
         {
-            return await openCandService.GetCandidatoAsync(id);
+            var result = await openCandService.GetCandidatoAsync(id);
+            result.Cpf = CpfMasking.MaskCpf(result.Cpf);
+
+            return result;
         }
 
         [HttpGet("{id}/bens")]

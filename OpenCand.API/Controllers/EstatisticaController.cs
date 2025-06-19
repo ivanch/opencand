@@ -6,7 +6,7 @@ using OpenCand.API.Services;
 
 namespace OpenCand.API.Controllers
 {
-    [EnableRateLimiting(RateLimitingConfig.DefaultPolicy)]
+    [EnableRateLimiting(RateLimitingConfig.EstatisticaPolicy)]
     public class EstatisticaController : BaseController
     {
         private readonly EstatisticaService estatisticaService;

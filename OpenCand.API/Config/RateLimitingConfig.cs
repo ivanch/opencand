@@ -8,6 +8,7 @@ namespace OpenCand.API.Config
         public const string DefaultPolicy = "DefaultPolicy";
         public const string CandidatoSearchPolicy = "CandidatoSearchPolicy";
         public const string CpfRevealPolicy = "CpfRevealPolicy";
+        public const string EstatisticaPolicy = "EstatisticaPolicy";
 
         public static void ConfigureRateLimiting(this IServiceCollection services)
         {
@@ -48,6 +49,15 @@ namespace OpenCand.API.Config
                     options.Window = TimeSpan.FromMinutes(1);
                     options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
                     options.QueueLimit = 0; // No burst
+                });
+
+                // CPF Reveal policy: 25 requests per minute with 10 burst
+                options.AddFixedWindowLimiter(policyName: EstatisticaPolicy, options =>
+                {
+                    options.PermitLimit = 25;
+                    options.Window = TimeSpan.FromMinutes(1);
+                    options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                    options.QueueLimit = 10; // No burst
                 });
 
                 options.OnRejected = async (context, token) =>
