@@ -65,10 +65,10 @@ namespace OpenCand.API.Repository
 
                 using (var connection = new NpgsqlConnection(ConnectionString))
                 {
-                    result.Partidos = (await connection.QueryAsync<string>(@"SELECT DISTINCT sigla FROM partido;")).AsList();
-                    result.SiglasUF = (await connection.QueryAsync<string>(@"SELECT DISTINCT siglauf FROM candidato_mapping;")).AsList();
-                    result.Anos = (await connection.QueryAsync<int>(@"SELECT DISTINCT ano FROM candidato_mapping;")).AsList();
-                    result.Cargos = (await connection.QueryAsync<string>(@"SELECT DISTINCT cargo FROM candidato_mapping;")).AsList();
+                    result.Partidos = (await connection.QueryAsync<string>(@"SELECT DISTINCT sigla FROM partido ORDER BY sigla ASC;")).AsList();
+                    result.SiglasUF = (await connection.QueryAsync<string>(@"SELECT DISTINCT siglauf FROM candidato_mapping ORDER BY siglauf ASC;")).AsList();
+                    result.Anos = (await connection.QueryAsync<int>(@"SELECT DISTINCT ano FROM candidato_mapping ORDER BY ano ASC;")).AsList();
+                    result.Cargos = (await connection.QueryAsync<string>(@"SELECT DISTINCT cargo FROM candidato_mapping ORDER BY cargo ASC;")).AsList();
                 }
 
                 return result;
