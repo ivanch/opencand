@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenCand.Config;
+using OpenCand.ETL.Repository;
 using OpenCand.ETL.Services;
 using OpenCand.Parser.Models;
 using OpenCand.Parser.Services;
@@ -21,6 +22,8 @@ namespace OpenCand.Parser
 
         private readonly DespesaReceitaService despesaReceitaService;
 
+        private readonly ViewRepository viewRepository;
+
         private readonly string BasePath;
 
         public ParserManager(
@@ -32,7 +35,8 @@ namespace OpenCand.Parser
             CsvParserService<RedeSocialCSV> redeSocialParserService,
             CsvParserService<DespesasCSV> despesaParserService,
             CsvParserService<ReceitasCSV> receitaParserService,
-            DespesaReceitaService despesaReceitaService)
+            DespesaReceitaService despesaReceitaService,
+            ViewRepository viewRepository)
         {
             this.logger = logger;
             this.csvSettings = csvSettings.Value;
@@ -43,6 +47,7 @@ namespace OpenCand.Parser
             this.despesaParserService = despesaParserService;
             this.receitaParserService = receitaParserService;
             this.despesaReceitaService = despesaReceitaService;
+            this.viewRepository = viewRepository;
 
             // Get the base path from either SampleFolder in csvSettings or the BasePath in configuration
             BasePath = configuration.GetValue<string>("BasePath") ?? string.Empty;
@@ -73,6 +78,12 @@ namespace OpenCand.Parser
             await ParseFolder(receitasDirectory, receitaParserService);
 
             logger.LogInformation("ParseFullDataAsync - Full data parsing completed!");
+
+            logger.LogInformation("ParseFullDataAsync - Will refresh materialized views and re-run the analyzes.");
+            
+            await viewRepository.RefreshMaterializedViews();
+            
+            logger.LogInformation("ParseFullDataAsync - Materialized views refreshed successfully!");
         }
 
         private async Task ParseFolder<CsvObj>(string csvDirectory, CsvParserService<CsvObj> csvParserService)

@@ -53,8 +53,7 @@ namespace OpenCand.API
 
             app.Run();
         }
-        
-        private static void SetupServices(WebApplicationBuilder builder)
+          private static void SetupServices(WebApplicationBuilder builder)
         {
             builder.Services.Configure<FotosSettings>(builder.Configuration.GetSection("FotosSettings"));
             builder.Services.AddMemoryCache();
@@ -67,6 +66,9 @@ namespace OpenCand.API
 
             builder.Services.AddScoped<OpenCandService>();
             builder.Services.AddScoped<EstatisticaService>();
+            
+            // Add cache preload background service
+            builder.Services.AddHostedService<CachePreloadService>();
         }
     }
 }

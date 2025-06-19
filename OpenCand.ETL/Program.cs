@@ -79,6 +79,7 @@ namespace OpenCand
                     services.AddTransient<RedeSocialRepository>();
                     services.AddTransient<PartidoRepository>();
                     services.AddTransient<CsvFixerService>();
+                    services.AddTransient<ViewRepository>();
                 });
     }
 }
