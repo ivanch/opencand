@@ -66,6 +66,7 @@ namespace OpenCand.API.Services
 
             await PerformPreLoad("GetOpenCandStatsAsync", estatisticaService.GetMaioresEnriquecimentos);
             await PerformPreLoad("GetOpenCandStatsAsync", openCandService.GetOpenCandStatsAsync);
+            await PerformPreLoad("GetDatabaseTechStatsAsync", openCandService.GetDatabaseTechStatsAsync);
             await PerformPreLoad("GetDataAvailabilityStatsAsync", openCandService.GetDataAvailabilityStatsAsync);
 
             logger.LogInformation("Single-call endpoints preload completed");

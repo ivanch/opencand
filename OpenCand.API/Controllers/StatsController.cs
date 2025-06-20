@@ -27,6 +27,12 @@ namespace OpenCand.API.Controllers
         {
             return await openCandService.GetDataAvailabilityStatsAsync();
         }
+
+        [HttpGet("tech")]
+        public async Task<DatabaseTechStats> GetDatabaseTechStats()
+        {
+            return await openCandService.GetDatabaseTechStatsAsync();
+        }
     }
 }
 

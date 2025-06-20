@@ -47,6 +47,16 @@ namespace OpenCand.API.Services
             return stats;
         }
 
+        public async Task<DatabaseTechStats> GetDatabaseTechStatsAsync()
+        {
+            var stats = await openCandRepository.GetDatabaseTechStatsAsync();
+
+            stats.Tables = stats.Tables.OrderBy(t => t.Name).ToList();
+            stats.MaterializedViews = stats.MaterializedViews.OrderBy(mv => mv.Name).ToList();
+
+            return stats;
+        }
+
         public async Task<CandidatoSearchResult> SearchCandidatosAsync(string query)
         {
             return new CandidatoSearchResult()

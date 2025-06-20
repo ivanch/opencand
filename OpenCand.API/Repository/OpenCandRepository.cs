@@ -81,5 +81,63 @@ namespace OpenCand.API.Repository
 
             return result ?? new DataAvailabilityStats();
         }
+        
+        public async Task<DatabaseTechStats> GetDatabaseTechStatsAsync()
+        {
+            string cacheKey = GenerateCacheKey("DatabaseTechStats");
+
+            var result = await GetOrSetCacheAsync(cacheKey, async () =>
+            {
+                using (var connection = new NpgsqlConnection(ConnectionString))
+                {
+                    var stats = new DatabaseTechStats();
+
+
+                    // Get table stats using reltuples for entries
+                    var tableStats = await connection.QueryAsync<TableStats>(@"
+                        SELECT 
+                            pt.schemaname||'.'||pt.tablename as Name,
+                            pg_total_relation_size(pt.schemaname||'.'||pt.tablename) as TotalSize,
+                            COALESCE(c.reltuples,0)::bigint as Entries
+                        FROM pg_tables pt
+                        JOIN pg_class c ON c.relname = pt.tablename AND c.relkind = 'r'
+                        WHERE pt.schemaname = 'public'
+                        ORDER BY pg_total_relation_size(pt.schemaname||'.'||pt.tablename) DESC;");
+
+
+                    var tableStatsList = tableStats.ToList();
+                    stats.Tables = tableStatsList;
+                    stats.TotalSize = tableStatsList.Sum(t => t.TotalSize);
+                    stats.TotalEntries = tableStatsList.Sum(t => t.Entries);
+
+                    // Get materialized view stats using reltuples for entries
+                    var materializedViewStats = await connection.QueryAsync<TableStats>(@"
+                        SELECT 
+                            pmv.schemaname||'.'||pmv.matviewname as Name,
+                            pg_total_relation_size(pmv.schemaname||'.'||pmv.matviewname) as TotalSize,
+                            COALESCE(c.reltuples,0)::bigint as Entries
+                        FROM pg_matviews pmv
+                        JOIN pg_class c ON c.relname = pmv.matviewname AND c.relkind = 'm'
+                        WHERE pmv.schemaname = 'public'
+                        ORDER BY pg_total_relation_size(pmv.schemaname||'.'||pmv.matviewname) DESC;");
+
+                    stats.MaterializedViews = materializedViewStats.ToList();
+
+                    // Get index stats
+                    var indexStats = await connection.QueryFirstOrDefaultAsync<IndexStats>(@"
+                        SELECT 
+                            COUNT(*) as Amount,
+                            SUM(pg_relation_size(indexrelid)) as Size
+                        FROM pg_stat_user_indexes
+                        WHERE schemaname = 'public';");
+
+                    stats.Indexes = indexStats ?? new IndexStats();
+
+                    return stats;
+                }
+            });
+
+            return result ?? new DatabaseTechStats();
+        }
     }
 }
