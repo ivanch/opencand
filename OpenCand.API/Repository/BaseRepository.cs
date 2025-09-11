@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Npgsql;
+using System.Text.Json;
+using System.Text;
 
 namespace OpenCand.Repository
 {
@@ -56,7 +58,8 @@ namespace OpenCand.Repository
                 _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
                 {
                     SlidingExpiration = expiration ?? DefaultCacheExpiration,
-                    Priority = priority ?? DefaultCachePriority
+                    Priority = priority ?? DefaultCachePriority,
+                    Size = EstimateSize(result)
                 });
             }
 
@@ -99,7 +102,8 @@ namespace OpenCand.Repository
                 _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
                 {
                     SlidingExpiration = expiration ?? DefaultCacheExpiration,
-                    Priority = priority ?? DefaultCachePriority
+                    Priority = priority ?? DefaultCachePriority,
+                    Size = EstimateSize(result)
                 });
             }
 
@@ -132,6 +136,26 @@ namespace OpenCand.Repository
         protected static string GenerateCacheKey(string entityName, object? identifier = null)
         {
             return identifier != null ? $"{entityName}_{identifier}" : entityName;
+        }
+
+        /// <summary>
+        /// Estimates the memory size of an object by serializing it to JSON
+        /// </summary>
+        /// <typeparam name="T">Type of the object</typeparam>
+        /// <param name="obj">The object to estimate size for</param>
+        /// <returns>Estimated size in bytes</returns>
+        private static long EstimateSize<T>(T obj)
+        {
+            if (obj == null) return 0;
+            try
+            {
+                var json = JsonSerializer.Serialize(obj);
+                return Encoding.UTF8.GetByteCount(json);
+            }
+            catch
+            {
+                return 1024; // Default estimate if serialization fails
+            }
         }
     }
 }

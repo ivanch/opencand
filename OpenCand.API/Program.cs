@@ -36,7 +36,8 @@ namespace OpenCand.API
             {
                 FileProvider = new PhysicalFileProvider(Path.Combine(workingDir, "fotos_cand")),
                 RequestPath = "/assets/fotos"
-            });            app.UseHttpsRedirection();
+            });
+            app.UseHttpsRedirection();
 
             // Use rate limiting middleware
             app.UseRateLimiter();
@@ -53,11 +54,18 @@ namespace OpenCand.API
 
             app.Run();
         }
-          private static void SetupServices(WebApplicationBuilder builder)
+
+        private static void SetupServices(WebApplicationBuilder builder)
         {
             builder.Services.Configure<FotosSettings>(builder.Configuration.GetSection("FotosSettings"));
-            builder.Services.AddMemoryCache();
-            
+
+            // Configure memory cache with size limit from appsettings
+            var sizeLimitMB = builder.Configuration.GetValue<int>("CacheSettings:SizeLimitMB", 15);
+            builder.Services.AddMemoryCache(options =>
+            {
+                options.SizeLimit = sizeLimitMB * 1024L * 1024L; // Convert MB to bytes
+            });
+
             builder.Services.AddScoped(provider => new OpenCandRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
             builder.Services.AddScoped(provider => new CandidatoRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
             builder.Services.AddScoped(provider => new BemCandidatoRepository(provider.GetRequiredService<IConfiguration>(), provider.GetService<IMemoryCache>()));
@@ -66,7 +74,7 @@ namespace OpenCand.API
 
             builder.Services.AddScoped<OpenCandService>();
             builder.Services.AddScoped<EstatisticaService>();
-            
+
             // Add cache preload background service
             builder.Services.AddHostedService<CachePreloadService>();
         }
