@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.VisualBasic;
 using OpenCand.API.Config;
 using OpenCand.API.Model;
 using OpenCand.API.Services;
@@ -9,7 +8,6 @@ using OpenCand.Core.Utils;
 
 namespace OpenCand.API.Controllers
 {
-    [EnableRateLimiting(RateLimitingConfig.DefaultPolicy)]
     public class CandidatoController : BaseController
     {
         private readonly OpenCandService openCandService;

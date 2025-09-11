@@ -1,12 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
-using OpenCand.API.Config;
 using OpenCand.API.Model;
 using OpenCand.API.Services;
+using static OpenCand.API.Model.GetValueSumRequest;
 
 namespace OpenCand.API.Controllers
 {
-    [EnableRateLimiting(RateLimitingConfig.EstatisticaPolicy)]
     public class EstatisticaController : BaseController
     {
         private readonly EstatisticaService estatisticaService;

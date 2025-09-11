@@ -27,13 +27,12 @@ namespace OpenCand.API.Config
                 // Default policy: 200 requests per minute with burst of 100
                 options.AddFixedWindowLimiter(policyName: DefaultPolicy, options =>
                 {
-                    options.PermitLimit = 200;
+                    options.PermitLimit = 400;
                     options.Window = TimeSpan.FromMinutes(1);
                     options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
                     options.QueueLimit = 100; // Burst capacity
                 });
 
-                // Candidato Search policy: 300 requests per minute with burst of 200
                 options.AddFixedWindowLimiter(policyName: CandidatoSearchPolicy, options =>
                 {
                     options.PermitLimit = 300;
@@ -42,22 +41,12 @@ namespace OpenCand.API.Config
                     options.QueueLimit = 200; // Burst capacity
                 });
 
-                // CPF Reveal policy: 15 requests per minute without burst
                 options.AddFixedWindowLimiter(policyName: CpfRevealPolicy, options =>
                 {
-                    options.PermitLimit = 15;
+                    options.PermitLimit = 20;
                     options.Window = TimeSpan.FromMinutes(1);
                     options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                    options.QueueLimit = 0; // No burst
-                });
-
-                // CPF Reveal policy: 25 requests per minute with 10 burst
-                options.AddFixedWindowLimiter(policyName: EstatisticaPolicy, options =>
-                {
-                    options.PermitLimit = 25;
-                    options.Window = TimeSpan.FromMinutes(1);
-                    options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                    options.QueueLimit = 10; // No burst
+                    options.QueueLimit = 5; // Burst capacity
                 });
 
                 options.OnRejected = async (context, token) =>
@@ -67,7 +56,7 @@ namespace OpenCand.API.Config
                     var retryAfter = GetRetryAfter(context);
                     if (retryAfter.HasValue)
                     {
-                        context.HttpContext.Response.Headers.Add("Retry-After", retryAfter.Value.ToString());
+                        context.HttpContext.Response.Headers.Append("Retry-After", retryAfter.Value.ToString());
                     }
 
                     await context.HttpContext.Response.WriteAsync(
