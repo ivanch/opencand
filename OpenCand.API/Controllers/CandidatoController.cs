@@ -21,7 +21,7 @@ namespace OpenCand.API.Controllers
         [EnableRateLimiting(RateLimitingConfig.CandidatoSearchPolicy)]
         public async Task<CandidatoSearchResult> CandidatoSearch([FromQuery] string q)
         {
-            if (string.IsNullOrEmpty(q) || q.Length == 1)
+            if (string.IsNullOrEmpty(q) || q.Length < 3)
             {
                 throw new ArgumentException("Query parameter 'q' cannot be null/empty.", nameof(q));
             }

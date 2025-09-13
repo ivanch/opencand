@@ -21,9 +21,9 @@ namespace OpenCand.API.Controllers
         }
 
         [HttpGet("enriquecimento")]
-        public async Task<List<MaioresEnriquecimento>> GetMaioresEnriquecimentos()
+        public async Task<List<MaioresEnriquecimento>> GetMaioresEnriquecimentos([FromQuery] GetValueSumRequestFilter requestFilter)
         {
-            return await estatisticaService.GetMaioresEnriquecimentos();
+            return await estatisticaService.GetMaioresEnriquecimentos(requestFilter);
         }
 
         [HttpPost("values-sum")]

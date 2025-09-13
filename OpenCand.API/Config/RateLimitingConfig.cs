@@ -51,6 +51,11 @@ namespace OpenCand.API.Config
 
                 options.OnRejected = async (context, token) =>
                 {
+                    var loggerFactory = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>();
+                    var logger = loggerFactory.CreateLogger("RateLimitingConfig");
+                    var clientIdentifier = GetClientIdentifier(context.HttpContext);
+                    logger.LogWarning("Rate limit exceeded for client {ClientIdentifier}", clientIdentifier);
+
                     context.HttpContext.Response.StatusCode = 429;
                     
                     var retryAfter = GetRetryAfter(context);

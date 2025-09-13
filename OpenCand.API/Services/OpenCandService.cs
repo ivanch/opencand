@@ -37,11 +37,15 @@ namespace OpenCand.API.Services
 
         public async Task<OpenCandStats> GetOpenCandStatsAsync()
         {
+            logger.LogInformation("Getting OpenCand stats");
+            
             return await openCandRepository.GetOpenCandStatsAsync();
         }
 
         public async Task<DataAvailabilityStats> GetDataAvailabilityStatsAsync()
         {
+            logger.LogInformation("Getting data availability stats");
+
             var stats = await openCandRepository.GetDataAvailabilityAsync();
 
             return stats;
@@ -49,6 +53,8 @@ namespace OpenCand.API.Services
 
         public async Task<DatabaseTechStats> GetDatabaseTechStatsAsync()
         {
+            logger.LogInformation("Getting database tech stats");
+
             var stats = await openCandRepository.GetDatabaseTechStatsAsync();
 
             stats.Tables = stats.Tables.OrderBy(t => t.Name).ToList();
@@ -59,14 +65,18 @@ namespace OpenCand.API.Services
 
         public async Task<CandidatoSearchResult> SearchCandidatosAsync(string query)
         {
+            logger.LogInformation($"Searching candidatos with query: {query}");
+
             return new CandidatoSearchResult()
             {
-                Candidatos = await candidatoRepository.SearchCandidatosAsync(query)
+                Candidatos = await candidatoRepository.SearchCandidatosAsync(query) ?? new List<Candidato>()
             };
         }
 
         public async Task<Guid?> GetRandomCandidato()
         {
+            logger.LogInformation("Getting random candidato");
+
             return await candidatoRepository.GetRandomCandidatoIdAsync();
         }
 
@@ -76,6 +86,15 @@ namespace OpenCand.API.Services
             var eleicoes = await candidatoRepository.GetCandidatoMappingById(idcandidato);
             var candidatoExt = await candidatoRepository.GetCandidatoExtById(idcandidato);
 
+            try
+            {
+                await candidatoRepository.IncreaseCandidatoPopularity(idcandidato);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, $"Error increasing popularity for Candidato ID {idcandidato}");
+            }
+
             if (result == null)
             {
                 throw new KeyNotFoundException($"Candidato with ID {idcandidato} not found.");
@@ -83,6 +102,10 @@ namespace OpenCand.API.Services
             if (eleicoes == null || eleicoes.Count == 0)
             {
                 throw new KeyNotFoundException($"CandidatoMapping for ID {idcandidato} not found.");
+            }
+            if (candidatoExt == null)
+            {
+                throw new KeyNotFoundException($"CandidatoExt for ID {idcandidato} not found.");
             }
 
             foreach (var eleicao in eleicoes)
@@ -96,6 +119,8 @@ namespace OpenCand.API.Services
             result.Eleicoes = eleicoes.OrderByDescending(e => e.Ano).ToList();
             result.CandidatoExt = candidatoExt.OrderByDescending(ce => ce.Ano).ToList();
 
+            logger.LogDebug($"Found Candidato: {result.Nome}, ID: {result.IdCandidato}, CPF: {result.Cpf}, FotoUrl: {result.FotoUrl}");
+
             return result;
         }
 
@@ -107,6 +132,8 @@ namespace OpenCand.API.Services
                 result = new List<BemCandidato>();
             }
 
+            logger.LogInformation($"Found {result.Count} bens for Candidato ID {idcandidato}");
+
             return new BemCandidatoResult()
             {
                 Bens = result.OrderByDescending(r => r.TipoBem).ThenByDescending(r => r.Valor).ToList()
@@ -115,11 +142,15 @@ namespace OpenCand.API.Services
 
         public async Task<RedeSocialResult> GetCandidatoRedeSocialById(Guid idcandidato)
         {
+            logger.LogInformation($"Getting redes sociais for Candidato ID {idcandidato}");
+
             var result = await candidatoRepository.GetCandidatoRedeSocialById(idcandidato);
             if (result == null)
             {
                 result = new List<RedeSocial>();
             }
+
+            logger.LogDebug($"Found {result.Count} redes sociais for Candidato ID {idcandidato}");
 
             return new RedeSocialResult()
             {
@@ -129,11 +160,15 @@ namespace OpenCand.API.Services
 
         public async Task<CpfRevealResult> GetCandidatoCpfById(Guid idcandidato)
         {
+            logger.LogInformation($"Getting CPF for Candidato ID {idcandidato}");
+
             var result = await candidatoRepository.GetCandidatoCpfAsync(idcandidato);
             if (result == null)
             {
                 return new CpfRevealResult();
             }
+
+            logger.LogDebug($"Found CPF {result} for Candidato ID {idcandidato}");
 
             return new CpfRevealResult()
             {
@@ -143,11 +178,15 @@ namespace OpenCand.API.Services
 
         public async Task<DespesasResult> GetDespesasByIdAndYear(Guid idcandidato)
         {
+            logger.LogInformation($"Getting despesas for Candidato ID {idcandidato}");
+
             var result = await despesaReceitaRepository.GetDespesasByCandidatoIdYearAsync(idcandidato);
             if (result == null)
             {
                 return new DespesasResult();
             }
+
+            logger.LogDebug($"Found {result.Count} despesas for Candidato ID {idcandidato}");
 
             return new DespesasResult()
             {
@@ -157,11 +196,15 @@ namespace OpenCand.API.Services
 
         public async Task<ReceitaResult> GetReceitasByIdAndYear(Guid idcandidato)
         {
+            logger.LogInformation($"Getting receitas for Candidato ID {idcandidato}");
+
             var result = await despesaReceitaRepository.GetReceitasByCandidatoIdYearAsync(idcandidato);
             if (result == null)
             {
                 return new ReceitaResult();
             }
+
+            logger.LogDebug($"Found {result.Count} receitas for Candidato ID {idcandidato}");
 
             return new ReceitaResult()
             {

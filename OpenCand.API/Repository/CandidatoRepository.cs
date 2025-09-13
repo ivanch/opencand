@@ -102,6 +102,16 @@ namespace OpenCand.Repository
             }
         }
 
+        public async Task IncreaseCandidatoPopularity(Guid idcandidato)
+        {
+            using var connection = new NpgsqlConnection(ConnectionString);
+            await connection.ExecuteAsync(@"
+                UPDATE candidato
+                SET popularidade = popularidade + 1
+                WHERE idcandidato = @idcandidato;
+            ", new { idcandidato });
+        }
+
         public async Task<Guid?> GetRandomCandidatoIdAsync()
         {
             using var connection = new NpgsqlConnection(ConnectionString);

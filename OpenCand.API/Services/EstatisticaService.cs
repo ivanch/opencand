@@ -1,56 +1,54 @@
 ﻿using OpenCand.API.Model;
 using OpenCand.API.Repository;
-using OpenCand.Repository;
+using static OpenCand.API.Model.GetValueSumRequest;
 
 namespace OpenCand.API.Services
 {
     public class EstatisticaService
     {
-        private readonly OpenCandRepository openCandRepository;
-        private readonly CandidatoRepository candidatoRepository;
-        private readonly BemCandidatoRepository bemCandidatoRepository;
-        private readonly DespesaReceitaRepository despesaReceitaRepository;
         private readonly EstatisticaRepository estatisticaRepository;
-        private readonly IConfiguration configuration;
         private readonly ILogger<OpenCandService> logger;
 
         public EstatisticaService(
-            OpenCandRepository openCandRepository,
-            CandidatoRepository candidatoRepository,
-            BemCandidatoRepository bemCandidatoRepository,
-            DespesaReceitaRepository despesaReceitaRepository,
             EstatisticaRepository estatisticaRepository,
-            IConfiguration configuration,
             ILogger<OpenCandService> logger)
         {
-            this.openCandRepository = openCandRepository;
-            this.candidatoRepository = candidatoRepository;
-            this.bemCandidatoRepository = bemCandidatoRepository;
-            this.despesaReceitaRepository = despesaReceitaRepository;
             this.estatisticaRepository = estatisticaRepository;
-            this.configuration = configuration;
             this.logger = logger;
         }
 
         public async Task<ConfigurationModel> GetConfigurationModel()
         {
+            logger.LogInformation("Getting configuration model");
+
             return await estatisticaRepository.GetConfiguration();
         }
 
-        public async Task<List<MaioresEnriquecimento>> GetMaioresEnriquecimentos()
+        public async Task<List<MaioresEnriquecimento>> GetMaioresEnriquecimentos(GetValueSumRequestFilter? requestFilter = null)
         {
-            return await estatisticaRepository.GetMaioresEnriquecimentos();
+            logger.LogInformation($"Getting maiores enriquecimentos. Filters: Partido={requestFilter?.Partido}, Uf={requestFilter?.Uf}, Ano={requestFilter?.Ano}, Cargo={requestFilter?.Cargo}");
+
+            return await estatisticaRepository.GetMaioresEnriquecimentos(requestFilter);
         }
 
         public async Task<List<GetValueSumResponse>> GetValueSum(GetValueSumRequest request)
         {
+            logger.LogInformation($"Getting value sum for {request.Type} grouped by {request.GroupBy}. Filters: Partido={request.Filter?.Partido}, Uf={request.Filter?.Uf}, Ano={request.Filter?.Ano}, Cargo={request.Filter?.Cargo}");
+            // count exec time
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
             ValidateRequest(request);
 
             var sqlBuilder = new SqlQueryBuilder();
             var query = sqlBuilder.BuildQuery(request);
             var parameters = sqlBuilder.GetParameters();
 
-            return await estatisticaRepository.GetValueSum(query, parameters);
+            var result = await estatisticaRepository.GetValueSum(query, parameters);
+
+            stopwatch.Stop();
+            logger.LogInformation($"GetValueSum - Execution time: {stopwatch.ElapsedMilliseconds} ms");
+
+            return result;
         }
 
         private void ValidateRequest(GetValueSumRequest request)

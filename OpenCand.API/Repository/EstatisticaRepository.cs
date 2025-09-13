@@ -2,8 +2,9 @@
 using Microsoft.Extensions.Caching.Memory;
 using Npgsql;
 using OpenCand.API.Model;
-using OpenCand.Core.Models;
 using OpenCand.Repository;
+using System.Text.Json;
+using static OpenCand.API.Model.GetValueSumRequest;
 
 namespace OpenCand.API.Repository
 {
@@ -16,9 +17,39 @@ namespace OpenCand.API.Repository
             this.configuration = configuration;
         }
 
-        public async Task<List<MaioresEnriquecimento>> GetMaioresEnriquecimentos()
+        public async Task<List<MaioresEnriquecimento>> GetMaioresEnriquecimentos(GetValueSumRequestFilter? requestFilter = null)
         {
-            string cacheKey = GenerateCacheKey("GetMaioresEnriquecimento");
+            var joinBase = string.Empty;
+            if (requestFilter == null) requestFilter = new GetValueSumRequestFilter();
+            else
+            {
+                joinBase = " JOIN candidato_mapping cm ON ed.idcandidato = cm.idcandidato ";
+                var whereConditions = new List<string>();
+                if (!string.IsNullOrWhiteSpace(requestFilter.Partido))
+                {
+                    whereConditions.Add($"cm.sgpartido = '{requestFilter.Partido}'");
+                }
+                if (!string.IsNullOrWhiteSpace(requestFilter.Uf))
+                {
+                    whereConditions.Add($"cm.siglauf = '{requestFilter.Uf.ToUpper()}'");
+                }
+                if (requestFilter.Ano != null)
+                {
+                    whereConditions.Add($"cm.ano = '{requestFilter.Ano}'");
+                }
+                if (!string.IsNullOrEmpty(requestFilter.Cargo))
+                {
+                    whereConditions.Add($"cm.cargo = '{requestFilter.Cargo}'");
+                }
+                if (whereConditions.Count > 0)
+                {
+                    joinBase += " WHERE " + string.Join(" AND ", whereConditions);
+                }
+            }
+
+            var requestJson = JsonSerializer.Serialize(requestFilter);
+
+            string cacheKey = GenerateCacheKey("GetMaioresEnriquecimento", requestJson);
 
             var result = await GetOrSetCacheAsync(cacheKey, async () =>
             {
@@ -46,6 +77,7 @@ namespace OpenCand.API.Repository
                         JOIN candidato c ON ed.idcandidato = c.idcandidato
                         JOIN mv_bem_candidato pi ON ed.idcandidato = pi.idcandidato AND ed.anoInicial = pi.ano
                         JOIN mv_bem_candidato pf ON ed.idcandidato = pf.idcandidato AND ed.anoFinal = pf.ano
+                        " + joinBase + @"
                         ORDER BY
                             enriquecimento DESC
                         LIMIT 25;")

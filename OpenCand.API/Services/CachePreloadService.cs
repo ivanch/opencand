@@ -58,13 +58,14 @@ namespace OpenCand.API.Services
                     await PerformPreLoad("GetValueSum", () => estatisticaService.GetValueSum(request));
                 }
             }
+
+            await PerformPreLoad("GetMaioresEnriquecimentos", () => estatisticaService.GetMaioresEnriquecimentos(null));
         }
 
         private async Task PreloadSingleEndpoints(EstatisticaService estatisticaService, OpenCandService openCandService)
         {
             logger.LogInformation("Preloading single-call endpoints...");
 
-            await PerformPreLoad("GetOpenCandStatsAsync", estatisticaService.GetMaioresEnriquecimentos);
             await PerformPreLoad("GetOpenCandStatsAsync", openCandService.GetOpenCandStatsAsync);
             await PerformPreLoad("GetDatabaseTechStatsAsync", openCandService.GetDatabaseTechStatsAsync);
             await PerformPreLoad("GetDataAvailabilityStatsAsync", openCandService.GetDataAvailabilityStatsAsync);
