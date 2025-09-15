@@ -13,7 +13,7 @@ env:
 
 jobs:
   build_and_deploy_api:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-arm64
 
     steps:
       - name: Check out repository

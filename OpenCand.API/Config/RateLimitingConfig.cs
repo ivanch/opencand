@@ -8,7 +8,6 @@ namespace OpenCand.API.Config
         public const string DefaultPolicy = "DefaultPolicy";
         public const string CandidatoSearchPolicy = "CandidatoSearchPolicy";
         public const string CpfRevealPolicy = "CpfRevealPolicy";
-        public const string EstatisticaPolicy = "EstatisticaPolicy";
 
         public static void ConfigureRateLimiting(this IServiceCollection services)
         {
