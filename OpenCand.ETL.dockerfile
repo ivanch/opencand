@@ -21,6 +21,6 @@ FROM mcr.microsoft.com/dotnet/runtime:8.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
-ENV ConnectionStrings__DefaultConnection
+ENV ConnectionStrings__DefaultConnection=
 
 ENTRYPOINT ["dotnet", "OpenCand.ETL.dll"]
