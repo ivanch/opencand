@@ -1,4 +1,3 @@
--- This script creates materialized views for bem_candidato, despesas_candidato, and receitas_candidato
 -- Drop existing materialized views if they exist
 DROP MATERIALIZED VIEW IF EXISTS mv_bem_candidato;
 DROP MATERIALIZED VIEW IF EXISTS mv_despesas_candidato;
