@@ -6,7 +6,6 @@ on:
 env:
   REGISTRY_HOST: git.ivanch.me
   IMAGE_ETL: ${{ env.REGISTRY_HOST }}/ivanch/opencand.etl
-  # ───────────────────────────────────────────────────────────────────────────
   DEPLOY_USER: ${{ secrets.LIVE_USERNAME }}
   DEPLOY_HOST: ${{ secrets.LIVE_HOST }}
   DEPLOY_PATH: ${{ secrets.LIVE_PROJECT_DIR }}
@@ -43,7 +42,6 @@ jobs:
           echo "${{ secrets.LIVE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          # Add the host to known_hosts so SSH does not prompt
           ssh-keyscan -H "${{ env.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Deploy to Production Server
@@ -53,12 +51,6 @@ jobs:
           ssh "${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}" << 'EOF'
             cd "${{ env.DEPLOY_PATH }}"
 
-            # Replace the “image:” line for the frontend service
-            # sed -i \
-            #   "s|image: .*/frontend:.*|image: ${{ env.IMAGE_FRONTEND }}:${TAG}|g" \
-            #   docker-compose.yml
-
-            # Pull only the new frontend image, then restart that service
             docker compose pull etl
             docker compose up etl -d
           EOF

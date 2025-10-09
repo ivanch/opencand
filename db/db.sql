@@ -24,7 +24,7 @@ CREATE INDEX idx_candidato_datanascimento ON candidato (datanascimento);
 CREATE INDEX idx_candidato_nomenascimento ON candidato (nome, datanascimento);
 CREATE INDEX idx_candidato_cpf ON candidato (cpf);
 
--- Each candidato (idcandidato, cpf, nome) will be mapped to a (sqcandidato, ano, tipo_eleicao, sg_uf, cargo, resultado) 
+-- Each candidato (idcandidato, cpf, nome, ...) will be mapped to a (sqcandidato, ano, tipo_eleicao, sg_uf, cargo, resultado, ...) 
 CREATE TABLE candidato_mapping (
     idcandidato UUID NOT NULL,
     cpf VARCHAR(11),
@@ -61,7 +61,6 @@ CREATE TABLE candidato_ext (
 CREATE INDEX idx_candidato_ext_idcandidato ON candidato_ext (idcandidato);
 CREATE INDEX idx_candidato_ext_ano ON candidato_ext (ano);
 
----- Table for storing assets of candidates
 CREATE TABLE bem_candidato (
     idcandidato UUID NOT NULL,
     ano INT NOT NULL,
@@ -75,7 +74,6 @@ ALTER TABLE bem_candidato ADD CONSTRAINT pk_bem_candidato PRIMARY KEY (idcandida
 CREATE INDEX idx_bem_candidato_idcandidato ON bem_candidato (idcandidato);
 CREATE INDEX idx_bem_candidato_valor ON bem_candidato (valor);
 
----- Table for storing social media links of candidates
 CREATE TABLE rede_social (
     idcandidato UUID NOT NULL,
     rede VARCHAR(50) NOT NULL,
@@ -87,7 +85,6 @@ CREATE TABLE rede_social (
 );
 CREATE INDEX idx_rede_social_idcandidato ON rede_social (idcandidato);
 
----- Table for storing party information
 CREATE TABLE partido (
     sigla VARCHAR(50) NOT NULL PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
@@ -96,7 +93,6 @@ CREATE TABLE partido (
 CREATE INDEX idx_partido_nome ON partido (nome);
 CREATE INDEX idx_partido_numero ON partido (numero);
 
----- Tables for storing despesas e receitas of candidacies
 CREATE TABLE despesas_candidato (
     iddespesa UUID NOT NULL DEFAULT gen_random_uuid(),
     idcandidato UUID NOT NULL,

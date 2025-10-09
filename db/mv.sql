@@ -78,13 +78,13 @@ WHERE cm.turno = '1';
 CREATE INDEX idx_mv_candidato_mapping_analytics ON mv_candidato_mapping_analytics (idcandidato, ano);
 
 
--- Refresh the materialized views to ensure they are up-to-date
+-- Refresh the materialized views
 REFRESH MATERIALIZED VIEW mv_bem_candidato;
 REFRESH MATERIALIZED VIEW mv_despesas_candidato;
 REFRESH MATERIALIZED VIEW mv_receitas_candidato;
 REFRESH MATERIALIZED VIEW mv_candidato_mapping_analytics;
 
--- Force re-analyze the materialized views to update statistics
+-- Force re-analyze the materialized views
 ANALYZE mv_bem_candidato;
 ANALYZE mv_despesas_candidato;
 ANALYZE mv_receitas_candidato;
