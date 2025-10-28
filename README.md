@@ -9,7 +9,7 @@ Atualmente é um projeto desenvolvido como hobby, onde apenas o código do proje
 O OpenCand é construído usando:
 * **.NET Core 8**  
   Para analisar informações iniciais dos arquivos CSV provenientes do TSE para o banco de dados PostgreSQL.  
-  Também é usado para a API RESTful que serve os dados para o front-end, também agindo como cache.
+  Também é usado para a API RESTful que serve os dados para o front-end, possuindo um cache interno.
 * **PostgreSQL**  
   Para o banco de dados.
 * **React**  
