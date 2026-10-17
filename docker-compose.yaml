@@ -1,0 +1,98 @@
+services:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # PostgreSQL Database (pre-loaded with schemas from ./db)
+  # ─────────────────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: opencand-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: opencand
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/db.sql:/docker-entrypoint-initdb.d/01-db.sql:ro
+      - ./db/mv.sql:/docker-entrypoint-initdb.d/02-mv.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d opencand"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - opencand-net
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # OpenCand API (REST Backend & Swagger)
+  # ─────────────────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: src/OpenCand.API/Dockerfile
+    container_name: opencand-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5299:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      DatabaseSettings__ConnectionString: Host=postgres;Port=5432;Database=opencand;Username=root;Password=root;Pooling=true;Minimum Pool Size=1;Maximum Pool Size=20;Connection Lifetime=300;Command Timeout=30;Application Name=OpenCand.API;Include Error Detail=true
+      FotosSettings__Path: ./fotos_cand
+      FotosSettings__ApiBasePath: http://localhost:5299/assets/fotos
+    volumes:
+      - ./src/OpenCand.API/fotos_cand:/app/fotos_cand
+    networks:
+      - opencand-net
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # OpenCand UI (React / Vite Frontend served by Nginx)
+  # ─────────────────────────────────────────────────────────────────────────────
+  ui:
+    build:
+      context: ./src/OpenCand.UI
+      dockerfile: Dockerfile
+    container_name: opencand-ui
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+    environment:
+      VITE_API_BASE_URL: http://localhost:5299
+    networks:
+      - opencand-net
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # OpenCand ETL (Data parser & importer from CSV files)
+  # Run on-demand via: docker compose --profile etl run --rm etl
+  # ─────────────────────────────────────────────────────────────────────────────
+  etl:
+    build:
+      context: .
+      dockerfile: src/OpenCand.ETL/Dockerfile
+    container_name: opencand-etl
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DatabaseSettings__ConnectionString: Host=postgres;Port=5432;Database=opencand;Username=root;Password=root;Include Error Detail=true;CommandTimeout=300
+      BasePath: /app/sample
+    volumes:
+      - ./sample:/app/sample:ro
+    profiles:
+      - etl
+    networks:
+      - opencand-net
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  opencand-net:
+    driver: bridge

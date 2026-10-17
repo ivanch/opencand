@@ -1,33 +1,64 @@
-name: API and ETL Build
+name: Build All Projects
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch: {}
+
+env:
+  IMAGE_ETL: git.ivanch.me/ivanch/opencand.etl
+  IMAGE_API: git.ivanch.me/ivanch/opencand.api
+  IMAGE_UI: git.ivanch.me/ivanch/opencand.ui
 
 jobs:
   build_etl:
-    runs-on: ubuntu-arm64
-
+    name: Build ETL Image
+    runs-on: runner-slim-amd64
     steps:
       - name: Check out repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Build ETL Image
-        run: |
-          docker build \
-            -f OpenCand.ETL.dockerfile \
-            .
-        
+      - name: Build and Push ETL Image
+        uses: https://git.ivanch.me/ivanch/pipeline-actions/build-and-push@main
+        with:
+          image: ${{ env.IMAGE_ETL }}
+          registry_password: ${{ secrets.REGISTRY_PASSWORD }}
+          ssh_key: ${{ secrets.SSH_KEY_DOCKERBUILD }}
+          platforms: linux/amd64,linux/arm64
+          build_context: .
+          build_dockerfile: src/OpenCand.ETL/Dockerfile
+
   build_api:
-    runs-on: ubuntu-arm64
-
+    name: Build API Image
+    runs-on: runner-slim-amd64
     steps:
       - name: Check out repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Build API Image
-        run: |
-          docker build \
-            -f OpenCand.API.dockerfile \
-            .
+      - name: Build and Push API Image
+        uses: https://git.ivanch.me/ivanch/pipeline-actions/build-and-push@main
+        with:
+          image: ${{ env.IMAGE_API }}
+          registry_password: ${{ secrets.REGISTRY_PASSWORD }}
+          ssh_key: ${{ secrets.SSH_KEY_DOCKERBUILD }}
+          platforms: linux/amd64,linux/arm64
+          build_context: .
+          build_dockerfile: src/OpenCand.API/Dockerfile
+
+  build_ui:
+    name: Build UI Image
+    runs-on: runner-slim-amd64
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build and Push UI Image
+        uses: https://git.ivanch.me/ivanch/pipeline-actions/build-and-push@main
+        with:
+          image: ${{ env.IMAGE_UI }}
+          registry_password: ${{ secrets.REGISTRY_PASSWORD }}
+          ssh_key: ${{ secrets.SSH_KEY_DOCKERBUILD }}
+          platforms: linux/amd64,linux/arm64
+          build_context: src/OpenCand.UI
+          build_dockerfile: Dockerfile

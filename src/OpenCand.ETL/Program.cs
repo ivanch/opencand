@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -45,6 +45,10 @@ namespace OpenCand
             Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration((hostingContext, config) =>
                 {
+                    var basePath = File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json"))
+                        ? Directory.GetCurrentDirectory()
+                        : AppContext.BaseDirectory;
+                    config.SetBasePath(basePath);
                     config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
                     config.AddJsonFile($"appsettings.{hostingContext.HostingEnvironment.EnvironmentName}.json", optional: true);
                     config.AddEnvironmentVariables();

@@ -11,7 +11,15 @@ namespace OpenCand.API
     {
         public static void Main(string[] args)
         {
-            var builder = WebApplication.CreateBuilder(args);            // Add services to the container.
+            var contentRoot = File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json"))
+                ? Directory.GetCurrentDirectory()
+                : AppContext.BaseDirectory;
+
+            var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+            {
+                Args = args,
+                ContentRootPath = contentRoot
+            });            // Add services to the container.
             builder.Services.AddControllers();
 
             SetupServices(builder);
@@ -31,10 +39,15 @@ namespace OpenCand.API
                 app.UseSwaggerUI();
             }
 
-            var workingDir = Directory.GetCurrentDirectory();
+            var workingDir = contentRoot;
+            var fotosPath = Path.Combine(workingDir, "fotos_cand");
+            if (!Directory.Exists(fotosPath))
+            {
+                Directory.CreateDirectory(fotosPath);
+            }
             app.UseStaticFiles(new StaticFileOptions
             {
-                FileProvider = new PhysicalFileProvider(Path.Combine(workingDir, "fotos_cand")),
+                FileProvider = new PhysicalFileProvider(fotosPath),
                 RequestPath = "/assets/fotos"
             });
             app.UseHttpsRedirection();

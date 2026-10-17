@@ -4,53 +4,37 @@ on:
   workflow_dispatch: {}
 
 env:
-  REGISTRY_HOST: git.ivanch.me
-  IMAGE_API: ${{ env.REGISTRY_HOST }}/ivanch/opencand.api
-  DEPLOY_USER: ${{ secrets.LIVE_USERNAME }}
-  DEPLOY_HOST: ${{ secrets.LIVE_HOST }}
-  DEPLOY_PATH: ${{ secrets.LIVE_PROJECT_DIR }}
+  IMAGE_API: git.ivanch.me/ivanch/opencand.api
 
 jobs:
-  build_and_deploy_api:
-    runs-on: ubuntu-arm64
-
+  build:
+    name: Build API Image
+    runs-on: runner-slim-amd64
     steps:
       - name: Check out repository
-        uses: actions/checkout@v2
-
-      - name: Log in to Container Registry
-        run: |
-          echo "${{ secrets.REGISTRY_PASSWORD }}" \
-            | docker login "${{ env.REGISTRY_HOST }}" \
-                -u "${{ secrets.REGISTRY_USERNAME }}" \
-                --password-stdin
+        uses: actions/checkout@v4
 
       - name: Build and Push API Image
-        run: |
-          TAG=latest
+        uses: https://git.ivanch.me/ivanch/pipeline-actions/build-and-push@main
+        with:
+          image: ${{ env.IMAGE_API }}
+          registry_password: ${{ secrets.REGISTRY_PASSWORD }}
+          ssh_key: ${{ secrets.SSH_KEY_DOCKERBUILD }}
+          platforms: linux/amd64,linux/arm64
+          build_context: .
+          build_dockerfile: src/OpenCand.API/Dockerfile
 
-          docker build \
-            -t "${{ env.IMAGE_API }}:${TAG}" \
-            -f OpenCand.API.dockerfile \
-            .
-
-          docker push "${{ env.IMAGE_API }}:${TAG}"
-
-      - name: Set up SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.LIVE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          ssh-keyscan -H "${{ env.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
-
-      - name: Deploy to Production Server
-        run: |
-          TAG=latest
-
-          ssh "${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}" << 'EOF'
-            cd "${{ env.DEPLOY_PATH }}"
-
-            docker compose pull api
-            docker compose up api -d
-          EOF
+  deploy:
+    name: Deploy API to Production
+    runs-on: runner-slim-amd64
+    needs: build
+    steps:
+      - name: Deploy via SSH
+        uses: https://git.ivanch.me/ivanch/pipeline-actions/ssh-deploy@main
+        with:
+          ssh_host: ${{ secrets.DEPLOY_HOST || secrets.LIVE_HOST }}
+          ssh_username: ${{ secrets.DEPLOY_USERNAME || secrets.LIVE_USERNAME }}
+          ssh_key: ${{ secrets.DEPLOY_KEY || secrets.LIVE_KEY }}
+          remote_dir: ${{ secrets.DEPLOY_DIR || secrets.LIVE_PROJECT_DIR }}
+          image: ${{ env.IMAGE_API }}
+          image_tag: latest

@@ -15,4 +15,13 @@ appsettings.Development.json
 fotos_cand
 *.zip
 
-docker-compose.yaml
+# Docker Compose override
+docker-compose.override.yaml
+docker-compose.override.yml
+
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+.env.local

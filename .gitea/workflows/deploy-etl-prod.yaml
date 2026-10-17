@@ -4,53 +4,37 @@ on:
   workflow_dispatch: {}
 
 env:
-  REGISTRY_HOST: git.ivanch.me
-  IMAGE_ETL: ${{ env.REGISTRY_HOST }}/ivanch/opencand.etl
-  DEPLOY_USER: ${{ secrets.LIVE_USERNAME }}
-  DEPLOY_HOST: ${{ secrets.LIVE_HOST }}
-  DEPLOY_PATH: ${{ secrets.LIVE_PROJECT_DIR }}
+  IMAGE_ETL: git.ivanch.me/ivanch/opencand.etl
 
 jobs:
-  build_and_deploy_etl:
-    runs-on: ubuntu-arm64
-
+  build:
+    name: Build ETL Image
+    runs-on: runner-slim-amd64
     steps:
       - name: Check out repository
-        uses: actions/checkout@v2
-
-      - name: Log in to Container Registry
-        run: |
-          echo "${{ secrets.REGISTRY_PASSWORD }}" \
-            | docker login "${{ env.REGISTRY_HOST }}" \
-                -u "${{ secrets.REGISTRY_USERNAME }}" \
-                --password-stdin
+        uses: actions/checkout@v4
 
       - name: Build and Push ETL Image
-        run: |
-          TAG=latest
+        uses: https://git.ivanch.me/ivanch/pipeline-actions/build-and-push@main
+        with:
+          image: ${{ env.IMAGE_ETL }}
+          registry_password: ${{ secrets.REGISTRY_PASSWORD }}
+          ssh_key: ${{ secrets.SSH_KEY_DOCKERBUILD }}
+          platforms: linux/amd64,linux/arm64
+          build_context: .
+          build_dockerfile: src/OpenCand.ETL/Dockerfile
 
-          docker build \
-            -t "${{ env.IMAGE_ETL }}:${TAG}" \
-            -f OpenCand.ETL.dockerfile \
-            .
-
-          docker push "${{ env.IMAGE_ETL }}:${TAG}"
-
-      - name: Set up SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.LIVE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          ssh-keyscan -H "${{ env.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
-
-      - name: Deploy to Production Server
-        run: |
-          TAG=latest
-
-          ssh "${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}" << 'EOF'
-            cd "${{ env.DEPLOY_PATH }}"
-
-            docker compose pull etl
-            docker compose up etl -d
-          EOF
+  deploy:
+    name: Deploy ETL to Production
+    runs-on: runner-slim-amd64
+    needs: build
+    steps:
+      - name: Deploy via SSH
+        uses: https://git.ivanch.me/ivanch/pipeline-actions/ssh-deploy@main
+        with:
+          ssh_host: ${{ secrets.DEPLOY_HOST || secrets.LIVE_HOST }}
+          ssh_username: ${{ secrets.DEPLOY_USERNAME || secrets.LIVE_USERNAME }}
+          ssh_key: ${{ secrets.DEPLOY_KEY || secrets.LIVE_KEY }}
+          remote_dir: ${{ secrets.DEPLOY_DIR || secrets.LIVE_PROJECT_DIR }}
+          image: ${{ env.IMAGE_ETL }}
+          image_tag: latest

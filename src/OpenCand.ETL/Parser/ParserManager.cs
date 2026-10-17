@@ -55,6 +55,25 @@ namespace OpenCand.Parser
             {
                 throw new Exception("ParseFullDataAsync - BasePath is not configured in appsettings.json or CsvSettings.SampleFolder");
             }
+
+            if (!Directory.Exists(BasePath))
+            {
+                var candidatePaths = new[]
+                {
+                    Path.GetFullPath(BasePath),
+                    Path.Combine(Directory.GetCurrentDirectory(), BasePath),
+                    Path.Combine(AppContext.BaseDirectory, BasePath),
+                    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../sample")),
+                    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../sample")),
+                    Path.Combine(Directory.GetCurrentDirectory(), "sample"),
+                };
+
+                var foundPath = candidatePaths.FirstOrDefault(p => Directory.Exists(p));
+                if (foundPath != null)
+                {
+                    BasePath = foundPath;
+                }
+            }
         }
 
         public async Task ParseFullDataAsync()
