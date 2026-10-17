@@ -6,11 +6,6 @@ on:
       - main
   workflow_dispatch: {}
 
-env:
-  IMAGE_ETL: git.ivanch.me/ivanch/opencand.etl
-  IMAGE_API: git.ivanch.me/ivanch/opencand.api
-  IMAGE_UI: git.ivanch.me/ivanch/opencand.ui
-
 jobs:
   build_etl:
     name: Build ETL Image
@@ -19,11 +14,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Build and Push ETL Image
-        uses: https://git.ivanch.me/ivanch/pipeline-actions/build-and-push@main
+      - name: Build ETL Image
+        uses: https://git.ivanch.me/ivanch/pipeline-actions/docker-build@main
         with:
-          image: ${{ env.IMAGE_ETL }}
-          registry_password: ${{ secrets.REGISTRY_PASSWORD }}
           ssh_key: ${{ secrets.SSH_KEY_DOCKERBUILD }}
           platforms: linux/amd64,linux/arm64
           build_context: .
@@ -36,11 +29,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Build and Push API Image
-        uses: https://git.ivanch.me/ivanch/pipeline-actions/build-and-push@main
+      - name: Build API Image
+        uses: https://git.ivanch.me/ivanch/pipeline-actions/docker-build@main
         with:
-          image: ${{ env.IMAGE_API }}
-          registry_password: ${{ secrets.REGISTRY_PASSWORD }}
           ssh_key: ${{ secrets.SSH_KEY_DOCKERBUILD }}
           platforms: linux/amd64,linux/arm64
           build_context: .
@@ -53,11 +44,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Build and Push UI Image
-        uses: https://git.ivanch.me/ivanch/pipeline-actions/build-and-push@main
+      - name: Build UI Image
+        uses: https://git.ivanch.me/ivanch/pipeline-actions/docker-build@main
         with:
-          image: ${{ env.IMAGE_UI }}
-          registry_password: ${{ secrets.REGISTRY_PASSWORD }}
           ssh_key: ${{ secrets.SSH_KEY_DOCKERBUILD }}
           platforms: linux/amd64,linux/arm64
           build_context: src/OpenCand.UI
