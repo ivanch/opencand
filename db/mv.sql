@@ -1,7 +1,8 @@
 -- Materialized views. Idempotent: drops and recreates all of them.
 --
 -- Every view has a UNIQUE index, so `REFRESH MATERIALIZED VIEW CONCURRENTLY <name>` works after the first populate.
--- (NULLS NOT DISTINCT: siglauf / cargo / sgpartido can be NULL and must still count as one key.)
+-- Plain unique indexes (no NULLS NOT DISTINCT, which needs PostgreSQL 15+): the GROUP BY output is unique anyway, and a
+-- concurrent refresh just rewrites rows whose key has a NULL instead of matching them.
 --
 -- Each fact row is attached to exactly one turno='1' candidato_mapping row per (idcandidato, ano), picked
 -- deterministically with DISTINCT ON, so a candidate with several mappings in a year never multiplies the sums.
@@ -34,7 +35,7 @@ SELECT
 FROM bem_candidato b
 JOIN cm ON cm.idcandidato = b.idcandidato AND cm.ano = b.ano
 GROUP BY b.ano, b.idcandidato, cm.siglauf, cm.sgpartido, cm.cargo;
-CREATE UNIQUE INDEX ux_mv_bem_candidato ON mv_bem_candidato (ano, idcandidato, siglauf, sgpartido, cargo) NULLS NOT DISTINCT;
+CREATE UNIQUE INDEX ux_mv_bem_candidato ON mv_bem_candidato (ano, idcandidato, siglauf, sgpartido, cargo);
 
 ---
 --- bem_candidato by (idcandidato, ano), no mapping join: used by the "enriquecimento" ranking
@@ -67,7 +68,7 @@ SELECT
 FROM despesas_candidato d
 JOIN cm ON cm.idcandidato = d.idcandidato AND cm.ano = d.ano
 GROUP BY d.ano, d.idcandidato, cm.siglauf, d.sgpartido, cm.cargo;
-CREATE UNIQUE INDEX ux_mv_despesas_candidato ON mv_despesas_candidato (ano, idcandidato, siglauf, sgpartido, cargo) NULLS NOT DISTINCT;
+CREATE UNIQUE INDEX ux_mv_despesas_candidato ON mv_despesas_candidato (ano, idcandidato, siglauf, sgpartido, cargo);
 
 ---
 --- receitas_candidato by (ano, idcandidato, siglauf, sgpartido, cargo)
@@ -89,7 +90,7 @@ SELECT
 FROM receitas_candidato r
 JOIN cm ON cm.idcandidato = r.idcandidato AND cm.ano = r.ano
 GROUP BY r.ano, r.idcandidato, cm.siglauf, r.sgpartido, cm.cargo;
-CREATE UNIQUE INDEX ux_mv_receitas_candidato ON mv_receitas_candidato (ano, idcandidato, siglauf, sgpartido, cargo) NULLS NOT DISTINCT;
+CREATE UNIQUE INDEX ux_mv_receitas_candidato ON mv_receitas_candidato (ano, idcandidato, siglauf, sgpartido, cargo);
 
 ---
 --- candidate mapping summary (first round only)
@@ -99,7 +100,7 @@ FROM candidato_mapping cm
 JOIN candidato c ON cm.idcandidato = c.idcandidato
 WHERE cm.turno = '1';
 -- nome is determined by idcandidato and turno is constant, so this key is unique
-CREATE UNIQUE INDEX ux_mv_candidato_mapping_analytics ON mv_candidato_mapping_analytics (idcandidato, ano, siglauf, sgpartido, cargo) NULLS NOT DISTINCT;
+CREATE UNIQUE INDEX ux_mv_candidato_mapping_analytics ON mv_candidato_mapping_analytics (idcandidato, ano, siglauf, sgpartido, cargo);
 
 ANALYZE mv_bem_candidato;
 ANALYZE mv_bem_candidato_ano;
