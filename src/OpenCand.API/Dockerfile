@@ -11,6 +11,9 @@ RUN dotnet restore src/OpenCand.API/OpenCand.API.csproj
 # Copy source code and build
 COPY src/OpenCand.API/. src/OpenCand.API/
 COPY src/OpenCand.Core/. src/OpenCand.Core/
+# embedded by OpenCand.Core (migrations applied on startup + materialized view definitions)
+COPY db/migrations/ db/migrations/
+COPY db/mv.sql db/mv.sql
 
 WORKDIR /src/src/OpenCand.API
 RUN dotnet publish -c Release -o /app/publish

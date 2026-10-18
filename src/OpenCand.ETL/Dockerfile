@@ -11,7 +11,8 @@ RUN dotnet restore src/OpenCand.ETL/OpenCand.ETL.csproj
 # Copy source code and build
 COPY src/OpenCand.ETL/. src/OpenCand.ETL/
 COPY src/OpenCand.Core/. src/OpenCand.Core/
-# embedded by the ETL project (materialized view definitions)
+# embedded by OpenCand.Core (migrations applied on startup + materialized view definitions)
+COPY db/migrations/ db/migrations/
 COPY db/mv.sql db/mv.sql
 
 WORKDIR /src/src/OpenCand.ETL

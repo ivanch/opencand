@@ -1,6 +1,6 @@
-using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using OpenCand.Core.Database;
 
 namespace OpenCand.ETL.Database
 {
@@ -24,14 +24,7 @@ namespace OpenCand.ETL.Database
             this.logger = logger;
         }
 
-        public static string LoadSql()
-        {
-            var assembly = Assembly.GetExecutingAssembly();
-            using var stream = assembly.GetManifestResourceStream("mv.sql")
-                ?? throw new InvalidOperationException("The embedded resource mv.sql was not found.");
-            using var reader = new StreamReader(stream);
-            return reader.ReadToEnd();
-        }
+        public static string LoadSql() => DbMigrator.LoadResource("mv.sql");
 
         /// <summary>
         /// With swaps: one transaction drops the views, swaps the tables and recreates the views, so readers see either the

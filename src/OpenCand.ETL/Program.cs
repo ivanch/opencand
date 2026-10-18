@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using OpenCand.Config;
+using OpenCand.Core.Database;
 using OpenCand.ETL.Database;
 using OpenCand.ETL.Loading;
 using OpenCand.ETL.Pipeline;
@@ -33,6 +34,9 @@ namespace OpenCand
 
             try
             {
+                if (host.Services.GetRequiredService<IConfiguration>().GetValue("Database:AutoMigrate", true))
+                    await DbMigrator.MigrateAsync(host.Services.GetRequiredService<NpgsqlDataSource>(), logger, cts.Token);
+
                 return await host.Services.GetRequiredService<EtlRunner>().RunAsync(cts.Token);
             }
             catch (Exception ex)

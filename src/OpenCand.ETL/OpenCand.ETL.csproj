@@ -17,11 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- db/mv.sql is the single source of truth for the materialized views -->
-    <EmbeddedResource Include="..\..\db\mv.sql" LogicalName="mv.sql" />
-  </ItemGroup>
-
-  <ItemGroup>
     <InternalsVisibleTo Include="OpenCand.Tests" />
   </ItemGroup>
 

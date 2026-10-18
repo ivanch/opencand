@@ -5,16 +5,18 @@ using Microsoft.AspNetCore.Mvc;
 using OpenCand.API.Health;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.FileProviders;
+using Npgsql;
 using OpenCand.API.Config;
 using OpenCand.API.Repository;
 using OpenCand.API.Services;
+using OpenCand.Core.Database;
 using OpenCand.Repository;
 
 namespace OpenCand.API
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var contentRoot = File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json"))
                 ? Directory.GetCurrentDirectory()
@@ -36,6 +38,14 @@ namespace OpenCand.API
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
+
+            // Bring the schema up to date before serving; a failure here stops the process instead of serving a stale schema.
+            if (app.Configuration.GetValue("Database:AutoMigrate", true))
+            {
+                await using var dataSource = NpgsqlDataSource.Create(app.Configuration["DatabaseSettings:ConnectionString"]
+                    ?? throw new InvalidOperationException("DatabaseSettings:ConnectionString is not configured."));
+                await DbMigrator.MigrateAsync(dataSource, app.Services.GetRequiredService<ILogger<Program>>());
+            }
 
             // Must run first so the rate limiter and logs see the real client IP.
             app.UseForwardedHeaders();
@@ -95,7 +105,7 @@ namespace OpenCand.API
 
             app.MapHealthChecks("/health").DisableRateLimiting();
 
-            app.Run();
+            await app.RunAsync();
         }
 
         private static void SetupServices(WebApplicationBuilder builder)
