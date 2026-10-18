@@ -21,9 +21,9 @@ namespace OpenCand.API.Controllers
         [EnableRateLimiting(RateLimitingConfig.CandidatoSearchPolicy)]
         public async Task<CandidatoSearchResult> CandidatoSearch([FromQuery] string q)
         {
-            if (string.IsNullOrEmpty(q) || q.Length < 3)
+            if (string.IsNullOrWhiteSpace(q) || q.Trim().Length < 3)
             {
-                throw new ArgumentException("Query parameter 'q' cannot be null/empty.", nameof(q));
+                throw new ArgumentException("Query parameter 'q' must have at least 3 characters.", nameof(q));
             }
 
             var result = await openCandService.SearchCandidatosAsync(q);
@@ -67,22 +67,34 @@ namespace OpenCand.API.Controllers
         [EnableRateLimiting(RateLimitingConfig.CpfRevealPolicy)]
         public async Task<CpfRevealResult> GetCandidatoCpfById([FromRoute] Guid id)
         {
-            var rnd = new Random();
-            var randomWait = rnd.Next(1000, 3000);
-            await Task.Delay(randomWait);
             return await openCandService.GetCandidatoCpfById(id);
         }
 
+        /// <summary>
+        /// Without page/pageSize the full list is returned (legacy shape). With them, results are paged (pageSize max 200).
+        /// </summary>
         [HttpGet("{id}/despesas")]
-        public async Task<DespesasResult> GetCandidatoDespesas([FromRoute] Guid id)
+        public async Task<DespesasResult> GetCandidatoDespesas([FromRoute] Guid id, [FromQuery] int? ano, [FromQuery] int? page, [FromQuery] int? pageSize)
         {
-            return await openCandService.GetDespesasByIdAndYear(id);
+            return await openCandService.GetDespesasByIdAndYear(id, ano, page, pageSize);
+        }
+
+        [HttpGet("{id}/despesas/resumo")]
+        public async Task<FinanceResumoResult> GetCandidatoDespesasResumo([FromRoute] Guid id)
+        {
+            return await openCandService.GetDespesasResumo(id);
         }
 
         [HttpGet("{id}/receitas")]
-        public async Task<ReceitaResult> GetCandidatoReceitas([FromRoute] Guid id)
+        public async Task<ReceitaResult> GetCandidatoReceitas([FromRoute] Guid id, [FromQuery] int? ano, [FromQuery] int? page, [FromQuery] int? pageSize)
         {
-            return await openCandService.GetReceitasByIdAndYear(id);
+            return await openCandService.GetReceitasByIdAndYear(id, ano, page, pageSize);
+        }
+
+        [HttpGet("{id}/receitas/resumo")]
+        public async Task<FinanceResumoResult> GetCandidatoReceitasResumo([FromRoute] Guid id)
+        {
+            return await openCandService.GetReceitasResumo(id);
         }
     }
 }

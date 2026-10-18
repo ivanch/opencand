@@ -1,5 +1,6 @@
 
 import { openCandApi } from '../../api/openCandApi';
+import { isRequestCancelled } from '../../api/base';
 import type { EnrichmentResponse, ValueSumRequest, ValueSumResponse, CargoFilter } from '../../api/apiStatisticsModels';
 
 // Statistics data interfaces
@@ -25,6 +26,8 @@ export interface StatisticsData {
 
 export interface StatisticsRequestOptions {
   filters?: StatisticsRequestFilters;
+  /** Cancels every request of the batch when aborted. */
+  signal?: AbortSignal;
 }
 
 export interface StatisticsRequestFilters {
@@ -42,14 +45,15 @@ export async function getCandidatesWithMostAssets(options?: StatisticsRequestOpt
     filter: options?.filters
   };
   
-  const response = await openCandApi.getStatisticsValueSum(request);
+  const response = await openCandApi.getStatisticsValueSum(request, options?.signal);
   return Array.isArray(response) ? response : [response];
 }
 
-export async function getEnrichmentData(filters?: StatisticsRequestFilters): Promise<EnrichmentResponse[] | null> {
+export async function getEnrichmentData(filters?: StatisticsRequestFilters, signal?: AbortSignal): Promise<EnrichmentResponse[] | null> {
   try {
-    return await openCandApi.getStatisticsEnrichment(filters);
+    return await openCandApi.getStatisticsEnrichment(filters, signal);
   } catch (error) {
+    if (isRequestCancelled(error)) throw error;
     console.error('Error fetching enrichment data:', error);
     return null;
   }
@@ -63,7 +67,7 @@ export async function getCandidatesWithMostRevenue(options?: StatisticsRequestOp
     filter: options?.filters
   };
   
-  const response = await openCandApi.getStatisticsValueSum(request);
+  const response = await openCandApi.getStatisticsValueSum(request, options?.signal);
   return Array.isArray(response) ? response : [response];
 }
 
@@ -74,7 +78,7 @@ export async function getCandidatesWithMostExpenses(options?: StatisticsRequestO
     filter: options?.filters
   };
   
-  const response = await openCandApi.getStatisticsValueSum(request);
+  const response = await openCandApi.getStatisticsValueSum(request, options?.signal);
   return Array.isArray(response) ? response : [response];
 }
 
@@ -86,7 +90,7 @@ export async function getPartiesWithMostAssets(options?: StatisticsRequestOption
     filter: options?.filters
   };
   
-  const response = await openCandApi.getStatisticsValueSum(request);
+  const response = await openCandApi.getStatisticsValueSum(request, options?.signal);
   return Array.isArray(response) ? response : [response];
 }
 
@@ -97,7 +101,7 @@ export async function getPartiesWithMostExpenses(options?: StatisticsRequestOpti
     filter: options?.filters
   };
   
-  const response = await openCandApi.getStatisticsValueSum(request);
+  const response = await openCandApi.getStatisticsValueSum(request, options?.signal);
   return Array.isArray(response) ? response : [response];
 }
 
@@ -108,7 +112,7 @@ export async function getPartiesWithMostRevenue(options?: StatisticsRequestOptio
     filter: options?.filters
   };
   
-  const response = await openCandApi.getStatisticsValueSum(request);
+  const response = await openCandApi.getStatisticsValueSum(request, options?.signal);
   return Array.isArray(response) ? response : [response];
 }
 
@@ -120,7 +124,7 @@ export async function getStatesWithMostAssets(options?: StatisticsRequestOptions
     filter: options?.filters
   };
   
-  const response = await openCandApi.getStatisticsValueSum(request);
+  const response = await openCandApi.getStatisticsValueSum(request, options?.signal);
   return Array.isArray(response) ? response : [response];
 }
 
@@ -131,7 +135,7 @@ export async function getStatesWithMostExpenses(options?: StatisticsRequestOptio
     filter: options?.filters
   };
   
-  const response = await openCandApi.getStatisticsValueSum(request);
+  const response = await openCandApi.getStatisticsValueSum(request, options?.signal);
   return Array.isArray(response) ? response : [response];
 }
 
@@ -142,7 +146,7 @@ export async function getStatesWithMostRevenue(options?: StatisticsRequestOption
     filter: options?.filters
   };
   
-  const response = await openCandApi.getStatisticsValueSum(request);
+  const response = await openCandApi.getStatisticsValueSum(request, options?.signal);
   return Array.isArray(response) ? response : [response];
 }
 
@@ -169,7 +173,7 @@ export async function fetchAllStatisticsData(options?: StatisticsRequestOptions)
       statesWithMostRevenue
     ] = await Promise.all([
       getCandidatesWithMostAssets(options),
-      getEnrichmentData(options?.filters),
+      getEnrichmentData(options?.filters, options?.signal),
       getCandidatesWithMostRevenue(options),
       getCandidatesWithMostExpenses(options),
       getPartiesWithMostAssets(options),
@@ -193,7 +197,9 @@ export async function fetchAllStatisticsData(options?: StatisticsRequestOptions)
       statesWithMostRevenue
     };
   } catch (error) {
-    console.error('Error fetching statistics data:', error);
+    if (!isRequestCancelled(error)) {
+      console.error('Error fetching statistics data:', error);
+    }
     throw error;
   }
 }
@@ -210,6 +216,6 @@ export async function fetchStatisticsByCategory(
     filter: options?.filters
   };
   
-  const response = await openCandApi.getStatisticsValueSum(request);
+  const response = await openCandApi.getStatisticsValueSum(request, options?.signal);
   return Array.isArray(response) ? response : [response];
 }

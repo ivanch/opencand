@@ -13,54 +13,37 @@ namespace OpenCand.API.Config
         {
             services.AddRateLimiter(options =>
             {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+                // Global safety net: one bucket per client IP (not per path).
                 options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
                     RateLimitPartition.GetFixedWindowLimiter(
-                        partitionKey: GetClientIdentifier(httpContext),
-                        factory: partition => new FixedWindowRateLimiterOptions
+                        partitionKey: GetClientIp(httpContext),
+                        factory: _ => new FixedWindowRateLimiterOptions
                         {
                             AutoReplenishment = true,
-                            PermitLimit = 2000, // Global limit per minute
-                            Window = TimeSpan.FromMinutes(1)
+                            PermitLimit = 2000,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueLimit = 0
                         }));
 
-                // Default policy: 200 requests per minute with burst of 100
-                options.AddFixedWindowLimiter(policyName: DefaultPolicy, options =>
-                {
-                    options.PermitLimit = 400;
-                    options.Window = TimeSpan.FromMinutes(1);
-                    options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                    options.QueueLimit = 100; // Burst capacity
-                });
-
-                options.AddFixedWindowLimiter(policyName: CandidatoSearchPolicy, options =>
-                {
-                    options.PermitLimit = 300;
-                    options.Window = TimeSpan.FromMinutes(1);
-                    options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                    options.QueueLimit = 200; // Burst capacity
-                });
-
-                options.AddFixedWindowLimiter(policyName: CpfRevealPolicy, options =>
-                {
-                    options.PermitLimit = 20;
-                    options.Window = TimeSpan.FromMinutes(1);
-                    options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                    options.QueueLimit = 5; // Burst capacity
-                });
+                // Named policies are partitioned per client IP, so one client cannot exhaust the quota of others.
+                AddPerClientPolicy(options, DefaultPolicy, permitLimit: 400, queueLimit: 100);
+                AddPerClientPolicy(options, CandidatoSearchPolicy, permitLimit: 300, queueLimit: 200);
+                AddPerClientPolicy(options, CpfRevealPolicy, permitLimit: 20, queueLimit: 5);
 
                 options.OnRejected = async (context, token) =>
                 {
-                    var loggerFactory = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>();
-                    var logger = loggerFactory.CreateLogger("RateLimitingConfig");
-                    var clientIdentifier = GetClientIdentifier(context.HttpContext);
-                    logger.LogWarning("Rate limit exceeded for client {ClientIdentifier}", clientIdentifier);
+                    var logger = context.HttpContext.RequestServices
+                        .GetRequiredService<ILoggerFactory>()
+                        .CreateLogger("RateLimitingConfig");
+                    logger.LogWarning("Rate limit exceeded for client {ClientIp}", GetClientIp(context.HttpContext));
 
-                    context.HttpContext.Response.StatusCode = 429;
-                    
-                    var retryAfter = GetRetryAfter(context);
-                    if (retryAfter.HasValue)
+                    context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+
+                    if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
                     {
-                        context.HttpContext.Response.Headers.Append("Retry-After", retryAfter.Value.ToString());
+                        context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
                     }
 
                     await context.HttpContext.Response.WriteAsync(
@@ -69,26 +52,23 @@ namespace OpenCand.API.Config
             });
         }
 
-        private static string GetClientIdentifier(HttpContext httpContext)
+        private static void AddPerClientPolicy(RateLimiterOptions options, string policyName, int permitLimit, int queueLimit)
         {
-            // Get client IP address for partitioning
-            var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() 
-                ?? httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() 
-                ?? "unknown";
-            
-            // Include the endpoint in the partition key for endpoint-specific limits
-            var endpoint = httpContext.Request.Path.ToString();
-            
-            return $"{clientIp}:{endpoint}";
+            options.AddPolicy(policyName, httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: GetClientIp(httpContext),
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        AutoReplenishment = true,
+                        PermitLimit = permitLimit,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = queueLimit
+                    }));
         }
 
-        private static int? GetRetryAfter(OnRejectedContext context)
-        {
-            if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
-            {
-                return (int)retryAfter.TotalSeconds;
-            }
-            return null;
-        }
+        // RemoteIpAddress is already the real client IP when UseForwardedHeaders is configured for the trusted proxy.
+        private static string GetClientIp(HttpContext httpContext)
+            => httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     }
 }

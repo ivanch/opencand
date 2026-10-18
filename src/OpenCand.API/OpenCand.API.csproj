@@ -16,6 +16,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="OpenCand.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="appsettings.Development.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

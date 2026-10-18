@@ -16,8 +16,10 @@ export type {
   Expense,
   CandidateIncome,
   Income,
+  YearSummary,
+  FinanceSummary,
 } from './apiModels';
 
 // Export base API classes for custom implementations
-export { BaseApiClient, ApiError } from './base';
+export { BaseApiClient, ApiError, RequestCancelledError, isRequestCancelled } from './base';
 export type { ApiRequestConfig } from './base';

@@ -19,68 +19,70 @@ namespace OpenCand.API.Repository
 
         public async Task<List<MaioresEnriquecimento>> GetMaioresEnriquecimentos(GetValueSumRequestFilter? requestFilter = null)
         {
-            var joinBase = string.Empty;
-            if (requestFilter == null) requestFilter = new GetValueSumRequestFilter();
-            else
+            requestFilter ??= new GetValueSumRequestFilter();
+
+            var parameters = new DynamicParameters();
+            var conditions = new List<string>();
+            if (!string.IsNullOrWhiteSpace(requestFilter.Partido))
             {
-                joinBase = " JOIN candidato_mapping cm ON ed.idcandidato = cm.idcandidato ";
-                var whereConditions = new List<string>();
-                if (!string.IsNullOrWhiteSpace(requestFilter.Partido))
-                {
-                    whereConditions.Add($"cm.sgpartido = '{requestFilter.Partido}'");
-                }
-                if (!string.IsNullOrWhiteSpace(requestFilter.Uf))
-                {
-                    whereConditions.Add($"cm.siglauf = '{requestFilter.Uf.ToUpper()}'");
-                }
-                if (requestFilter.Ano != null)
-                {
-                    whereConditions.Add($"cm.ano = '{requestFilter.Ano}'");
-                }
-                if (!string.IsNullOrEmpty(requestFilter.Cargo))
-                {
-                    whereConditions.Add($"cm.cargo = '{requestFilter.Cargo}'");
-                }
-                if (whereConditions.Count > 0)
-                {
-                    joinBase += " WHERE " + string.Join(" AND ", whereConditions);
-                }
+                conditions.Add("cm.sgpartido = @partido");
+                parameters.Add("partido", requestFilter.Partido.Trim());
+            }
+            if (!string.IsNullOrWhiteSpace(requestFilter.Uf))
+            {
+                conditions.Add("cm.siglauf = @uf");
+                parameters.Add("uf", requestFilter.Uf.Trim().ToUpperInvariant());
+            }
+            if (requestFilter.Ano.HasValue)
+            {
+                conditions.Add("cm.ano = @ano");
+                parameters.Add("ano", requestFilter.Ano.Value);
+            }
+            if (!string.IsNullOrWhiteSpace(requestFilter.Cargo))
+            {
+                conditions.Add("cm.cargo = @cargo");
+                parameters.Add("cargo", requestFilter.Cargo.Trim());
             }
 
-            var requestJson = JsonSerializer.Serialize(requestFilter);
+            var mappingFilter = conditions.Count == 0
+                ? string.Empty
+                : $"WHERE EXISTS (SELECT 1 FROM candidato_mapping cm WHERE cm.idcandidato = ed.idcandidato AND {string.Join(" AND ", conditions)})";
 
-            string cacheKey = GenerateCacheKey("GetMaioresEnriquecimento", requestJson);
+            string cacheKey = GenerateCacheKey("GetMaioresEnriquecimento", JsonSerializer.Serialize(requestFilter));
 
             var result = await GetOrSetCacheAsync(cacheKey, async () =>
             {
                 using (var connection = new NpgsqlConnection(ConnectionString))
                 {
-                    return (await connection.QueryAsync<MaioresEnriquecimento>(@"
-                        WITH extremos_declaracao AS (
+                    return (await connection.QueryAsync<MaioresEnriquecimento>($@"
+                        WITH patrimonio AS (
+                            SELECT idcandidato, ano, valor
+                            FROM mv_bem_candidato_ano
+                        ),
+                        extremos_declaracao AS (
                             SELECT
                                 idcandidato,
                                 MIN(ano) AS anoInicial,
                                 MAX(ano) AS anoFinal
-                            FROM mv_bem_candidato
+                            FROM patrimonio
                             GROUP BY idcandidato
-                            HAVING COUNT(ano) >= 2
+                            HAVING COUNT(DISTINCT ano) >= 2
                         )
                         SELECT
                             ed.idcandidato,
                             c.nome,
                             ed.anoInicial,
-                            pi.valor AS patrimonioInicial,
+                            p_ini.valor AS patrimonioInicial,
                             ed.anoFinal,
-                            pf.valor AS patrimonioFinal, 
-                            (pf.valor - pi.valor) AS enriquecimento
+                            p_fim.valor AS patrimonioFinal,
+                            (p_fim.valor - p_ini.valor) AS enriquecimento
                         FROM extremos_declaracao ed
                         JOIN candidato c ON ed.idcandidato = c.idcandidato
-                        JOIN mv_bem_candidato pi ON ed.idcandidato = pi.idcandidato AND ed.anoInicial = pi.ano
-                        JOIN mv_bem_candidato pf ON ed.idcandidato = pf.idcandidato AND ed.anoFinal = pf.ano
-                        " + joinBase + @"
-                        ORDER BY
-                            enriquecimento DESC
-                        LIMIT 25;")
+                        JOIN patrimonio p_ini ON ed.idcandidato = p_ini.idcandidato AND ed.anoInicial = p_ini.ano
+                        JOIN patrimonio p_fim ON ed.idcandidato = p_fim.idcandidato AND ed.anoFinal = p_fim.ano
+                        {mappingFilter}
+                        ORDER BY enriquecimento DESC
+                        LIMIT 25;", parameters)
                     ).AsList();
                 }
             });
@@ -109,9 +111,8 @@ namespace OpenCand.API.Repository
             return result ?? new ConfigurationModel();
         }
 
-        public async Task<List<GetValueSumResponse>> GetValueSum(string query, Dictionary<string, object>? parameters = null)
+        public async Task<List<GetValueSumResponse>> GetValueSum(string cacheKey, string query, Dictionary<string, object>? parameters = null)
         {
-            string cacheKey = GenerateCacheKey(query.GetHashCode().ToString());
             return await GetOrSetCacheAsync(cacheKey, async () =>
             {
                 using (var connection = new NpgsqlConnection(ConnectionString))

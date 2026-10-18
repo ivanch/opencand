@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowDownOnSquareStackIcon, BookOpenIcon, ChartBarIcon, ChartBarSquareIcon, DocumentMagnifyingGlassIcon, DocumentTextIcon, IdentificationIcon, LightBulbIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { ArrowDownOnSquareStackIcon, ChartBarSquareIcon, DocumentMagnifyingGlassIcon, DocumentTextIcon, IdentificationIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import Card from '../shared/Card';
 
 const FeatureCard: React.FC<{ icon: React.ElementType, title: string, children: React.ReactNode }> = ({ icon: Icon, title, children }) => {

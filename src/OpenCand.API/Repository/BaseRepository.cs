@@ -1,7 +1,5 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Npgsql;
-using System.Text.Json;
-using System.Text;
 
 namespace OpenCand.Repository
 {
@@ -11,8 +9,10 @@ namespace OpenCand.Repository
         protected NpgsqlConnection? Connection { get; private set; }
         protected readonly IMemoryCache? _cache;
 
-        // Default cache settings
-        protected static readonly TimeSpan DefaultCacheExpiration = TimeSpan.MaxValue;
+        // Default cache settings. Entries expire on an absolute TTL so data refreshed by the ETL is eventually served
+        // even if the DataVersionWatcher misses a run. The cache is sized by entry count (every entry has Size = 1).
+        public static readonly TimeSpan DefaultCacheExpiration = TimeSpan.FromHours(6);
+        public static readonly TimeSpan SearchCacheExpiration = TimeSpan.FromMinutes(10);
         protected static readonly CacheItemPriority DefaultCachePriority = CacheItemPriority.Normal;
 
         public BaseRepository(IConfiguration configuration, IMemoryCache? cache = null)
@@ -57,9 +57,9 @@ namespace OpenCand.Repository
             {
                 _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
                 {
-                    SlidingExpiration = expiration ?? DefaultCacheExpiration,
+                    AbsoluteExpirationRelativeToNow = expiration ?? DefaultCacheExpiration,
                     Priority = priority ?? DefaultCachePriority,
-                    Size = EstimateSize(result)
+                    Size = 1
                 });
             }
 
@@ -101,9 +101,9 @@ namespace OpenCand.Repository
             {
                 _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
                 {
-                    SlidingExpiration = expiration ?? DefaultCacheExpiration,
+                    AbsoluteExpirationRelativeToNow = expiration ?? DefaultCacheExpiration,
                     Priority = priority ?? DefaultCachePriority,
-                    Size = EstimateSize(result)
+                    Size = 1
                 });
             }
 
@@ -136,26 +136,6 @@ namespace OpenCand.Repository
         protected static string GenerateCacheKey(string entityName, object? identifier = null)
         {
             return identifier != null ? $"{entityName}_{identifier}" : entityName;
-        }
-
-        /// <summary>
-        /// Estimates the memory size of an object by serializing it to JSON
-        /// </summary>
-        /// <typeparam name="T">Type of the object</typeparam>
-        /// <param name="obj">The object to estimate size for</param>
-        /// <returns>Estimated size in bytes</returns>
-        private static long EstimateSize<T>(T obj)
-        {
-            if (obj == null) return 0;
-            try
-            {
-                var json = JsonSerializer.Serialize(obj);
-                return Encoding.UTF8.GetByteCount(json);
-            }
-            catch
-            {
-                return 1024; // Default estimate if serialization fails
-            }
         }
     }
 }

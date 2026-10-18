@@ -3,6 +3,7 @@ import WhiteCard from '../../shared/WhiteCard';
 import StatisticsFilters from './StatisticsFilters';
 import StatisticsGraphs from './StatisticsGraphs';
 import { fetchAllStatisticsData, type StatisticsData, type StatisticsRequestOptions } from './statisticsRequests';
+import { isRequestCancelled } from '../../api/base';
 import type { CargoFilter } from '../../api/apiStatisticsModels';
 
 export interface FilterState {
@@ -25,6 +26,10 @@ const StatisticsPage: React.FC = () => {
 
   // Load statistics data when component mounts or filters change
   useEffect(() => {
+    // Cancelled in the cleanup, so a newer filter change aborts the in-flight batch
+    // and a stale response can never overwrite newer data.
+    const controller = new AbortController();
+
     const loadStatisticsData = async () => {
       try {
         setIsLoading(true);
@@ -37,19 +42,25 @@ const StatisticsPage: React.FC = () => {
             ano: filters.ano,
             cargo: filters.cargo,
           },
+          signal: controller.signal,
         };
 
         const data = await fetchAllStatisticsData(options);
+        if (controller.signal.aborted) return;
         setStatisticsData(data);
       } catch (err) {
+        if (controller.signal.aborted || isRequestCancelled(err)) return;
         setError('Erro ao carregar dados estatísticos');
         console.error('Error loading statistics data:', err);
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadStatisticsData();
+    return () => controller.abort();
   }, [filters]);
 
   const handleFiltersChange = (newFilters: FilterState) => {

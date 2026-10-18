@@ -25,3 +25,5 @@ dist/
 dist-ssr/
 *.local
 .env.local
+# Docker Compose secrets
+.env

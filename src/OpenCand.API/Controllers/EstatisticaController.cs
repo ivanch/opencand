@@ -15,12 +15,14 @@ namespace OpenCand.API.Controllers
         }
 
         [HttpGet("configuration")]
+        [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any)]
         public async Task<ConfigurationModel> GetConfiguration()
         {
             return await estatisticaService.GetConfigurationModel();
         }
 
         [HttpGet("enriquecimento")]
+        [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any)]
         public async Task<List<MaioresEnriquecimento>> GetMaioresEnriquecimentos([FromQuery] GetValueSumRequestFilter requestFilter)
         {
             return await estatisticaService.GetMaioresEnriquecimentos(requestFilter);

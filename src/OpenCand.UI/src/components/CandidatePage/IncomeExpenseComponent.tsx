@@ -1,35 +1,50 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BanknotesIcon } from '@heroicons/react/24/outline';
-import { type CandidateExpenses, type CandidateIncome } from '../../api';
-import IncomeSection from './IncomeExpense/IncomeSection';
-import ExpenseSection from './IncomeExpense/ExpenseSection';
+import { openCandApi, isRequestCancelled, type YearSummary } from '../../api';
+import FinanceSection from './IncomeExpense/FinanceSection';
+import { EXPENSE_KIND, INCOME_KIND } from './IncomeExpense/financeKinds';
 
 interface IncomeExpenseComponentProps {
-  expenses: CandidateExpenses | null;
-  income: CandidateIncome | null;
-  isLoadingExpenses: boolean;
-  isLoadingIncome: boolean;
+  idCandidato: string;
 }
 
-const hasIncomeData = (income: CandidateIncome | null) => {
-  if (!income || income.receitas.length === 0) return false;
-  return true;
-};
+interface Summaries {
+  income: YearSummary[];
+  expenses: YearSummary[];
+}
 
-const hasExpenseData = (expenses: CandidateExpenses | null) => {
-  if (!expenses || expenses.despesas.length === 0) return false;
-  return true;
-};
+/** Loads the per-year totals of receitas/despesas; the rows are loaded by each section when a year is opened. */
+const IncomeExpenseComponent: React.FC<IncomeExpenseComponentProps> = ({ idCandidato }) => {
+  const [summaries, setSummaries] = useState<Summaries | null>(null);
 
-const IncomeExpenseComponent: React.FC<IncomeExpenseComponentProps> = ({ 
-  expenses, 
-  income, 
-  isLoadingExpenses, 
-  isLoadingIncome 
-}) => {
-  const showIncome = hasIncomeData(income);
-  const showExpenses = hasExpenseData(expenses);
-  if (!showIncome && !showExpenses) return null;
+  useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+    setSummaries(null);
+
+    const fetchSummary = async (request: () => Promise<{ resumo: YearSummary[] }>): Promise<YearSummary[]> => {
+      try {
+        return (await request()).resumo ?? [];
+      } catch (err) {
+        if (!isRequestCancelled(err)) console.error('Error fetching income/expense summary:', err);
+        return [];
+      }
+    };
+
+    Promise.all([
+      fetchSummary(() => openCandApi.getCandidateReceitasResumo(idCandidato, signal)),
+      fetchSummary(() => openCandApi.getCandidateDespesasResumo(idCandidato, signal)),
+    ]).then(([income, expenses]) => {
+      if (!signal.aborted) setSummaries({ income, expenses });
+    });
+
+    return () => controller.abort();
+  }, [idCandidato]);
+
+  const showIncome = (summaries?.income.length ?? 0) > 0;
+  const showExpenses = (summaries?.expenses.length ?? 0) > 0;
+  if (!summaries || (!showIncome && !showExpenses)) return null;
+
   return (
     <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] transition-all duration-200 p-6">
       <div className="flex items-center mb-6">
@@ -37,15 +52,12 @@ const IncomeExpenseComponent: React.FC<IncomeExpenseComponentProps> = ({
         <h2 className="text-2xl font-bold text-gray-900">Receitas e Despesas</h2>
       </div>
 
-      {/* Income Section */}
       {showIncome && (
-        <IncomeSection 
-          income={income}
-          isLoadingIncome={isLoadingIncome}
-        />
+        <div className="mb-8">
+          <FinanceSection idCandidato={idCandidato} kind={INCOME_KIND} summary={summaries.income} />
+        </div>
       )}
 
-      {/* Separator */}
       {showIncome && showExpenses && (
         <div className="flex items-center my-8">
           <div className="flex-grow border-t border-gray-300"></div>
@@ -56,12 +68,8 @@ const IncomeExpenseComponent: React.FC<IncomeExpenseComponentProps> = ({
         </div>
       )}
 
-      {/* Expenses Section */}
       {showExpenses && (
-        <ExpenseSection 
-          expenses={expenses}
-          isLoadingExpenses={isLoadingExpenses}
-        />
+        <FinanceSection idCandidato={idCandidato} kind={EXPENSE_KIND} summary={summaries.expenses} />
       )}
     </div>
   );

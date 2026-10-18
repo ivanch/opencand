@@ -5,7 +5,7 @@ interface GradientButtonProps extends React.PropsWithChildren {
   className?: string;
   to?: LinkProps['to'];
   href?: string;
-  [x: string]: any; // To allow other props like target, rel, type, etc.
+  [x: string]: unknown; // To allow other props like target, rel, type, etc.
 }
 
 const GradientButton: React.FC<GradientButtonProps> = ({

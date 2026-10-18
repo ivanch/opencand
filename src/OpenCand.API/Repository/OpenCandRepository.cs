@@ -8,11 +8,34 @@ namespace OpenCand.API.Repository
 {    
     public class OpenCandRepository : BaseRepository
     {
-        private readonly IConfiguration configuration;
+        private readonly string fotosPath;
 
-        public OpenCandRepository(IConfiguration configuration, IMemoryCache? cache = null) : base(configuration, cache)
+        /// <param name="fotosPath">Resolved photos folder (FotosSettings.Path).</param>
+        public OpenCandRepository(IConfiguration configuration, string fotosPath, IMemoryCache? cache = null) : base(configuration, cache)
         {
-            this.configuration = configuration;
+            this.fotosPath = fotosPath;
+        }
+
+        // Folder names look like foto_cand2022; anything else in the photos folder is ignored.
+        private static readonly System.Text.RegularExpressions.Regex FotoFolderRegex =
+            new(@"foto_cand(\d{4})", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        internal static List<int> ParseFotoYears(IEnumerable<string> directories)
+        {
+            return directories
+                .Select(dir => FotoFolderRegex.Match(System.IO.Path.GetFileName(dir.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar))))
+                .Where(m => m.Success)
+                .Select(m => int.Parse(m.Groups[1].Value))
+                .Distinct()
+                .OrderByDescending(ano => ano)
+                .ToList();
+        }
+
+        /// <summary>Latest ETL run id, or null when no run was recorded (or none yet).</summary>
+        public async Task<int?> GetLatestEtlRunIdAsync()
+        {
+            using var connection = new NpgsqlConnection(ConnectionString);
+            return await connection.QueryFirstOrDefaultAsync<int?>("SELECT max(id) FROM etl_run;");
         }
 
         public async Task<OpenCandStats> GetOpenCandStatsAsync()
@@ -61,19 +84,8 @@ namespace OpenCand.API.Repository
                     stats.ReceitaCandidatos = receitaCandidatosYears.ToList();
                     stats.RedeSocialCandidatos = redeSocialCandidatosYears.ToList();
 
-                    // Get all folders from appsetting `FotosSettings__BasePath`
-                    string basePath = configuration["FotosSettings:Path"] ?? string.Empty;
-                    if (string.IsNullOrEmpty(basePath))
-                        throw new InvalidOperationException("Base path for photos is not configured.");
-
-                    var directories = Directory.GetDirectories(basePath);
-                    if (directories.Any())
-                        stats.FotosCandidatos = directories
-                            .Select(dir => dir.Split(Path.DirectorySeparatorChar).Last().Split("_")[1].Replace("cand", ""))
-                            .Select(ano => Convert.ToInt32(ano))
-                            .Distinct()
-                            .OrderByDescending(ano => ano)
-                            .ToList();
+                    if (Directory.Exists(fotosPath))
+                        stats.FotosCandidatos = ParseFotoYears(Directory.GetDirectories(fotosPath));
 
                     return stats;
                 }

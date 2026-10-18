@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { FilterState } from './StatisticsPage';
-import type { CargoFilter, StatisticsConfig } from '../../api/apiStatisticsModels';
+import type { StatisticsConfig } from '../../api/apiStatisticsModels';
 import { openCandApi } from '../../api/openCandApi';
-import Button from '../../shared/Button';
 
 interface StatisticsFiltersProps {
   filters: FilterState;
@@ -46,7 +45,7 @@ const StatisticsFilters: React.FC<StatisticsFiltersProps> = ({
     fetchConfig();
   }, []);
 
-  const handleLocalChange = (key: keyof FilterState, value: any) => {
+  const handleLocalChange = (key: keyof FilterState, value: FilterState[keyof FilterState]) => {
     setLocalFilters((prev) => ({
       ...prev,
       [key]: value === '' ? null : value,

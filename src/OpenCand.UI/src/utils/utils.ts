@@ -31,24 +31,33 @@ export function formatCpf(cpf: string): string {
 }
 
 /**
- * Formats a date to DD/MM/YYYY format
+ * Formats a date to DD/MM/YYYY format.
+ * Dates coming from the API are calendar dates stored as UTC midnight, so they are read in UTC
+ * to avoid showing the previous day in timezones behind UTC (e.g. Brazil).
  * @param date - Date object or string/number that can be parsed into a Date
  * @returns Formatted date string in DD/MM/YYYY format or empty string if invalid
  */
-export function formatDateToDDMMYYYY(date: Date | string | number): string {
-    try {
-        const dateObj = date instanceof Date ? date : new Date(date);
-        
-        if (isNaN(dateObj.getTime())) {
-            return '';
-        }
-        
-        const day = String(dateObj.getDate()).padStart(2, '0');
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
-        const year = dateObj.getFullYear();
-        
-        return `${day}/${month}/${year}`;
-    } catch (error) {
+export function formatDateToDDMMYYYY(date: Date | string | number | null | undefined): string {
+    if (date === null || date === undefined || date === '') {
         return '';
     }
+
+    // ISO strings: use the calendar part as-is, no timezone conversion.
+    if (typeof date === 'string') {
+        const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
+        if (match) {
+            return `${match[3]}/${match[2]}/${match[1]}`;
+        }
+    }
+
+    const dateObj = date instanceof Date ? date : new Date(date);
+    if (isNaN(dateObj.getTime())) {
+        return '';
+    }
+
+    const day = String(dateObj.getUTCDate()).padStart(2, '0');
+    const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+    const year = dateObj.getUTCFullYear();
+
+    return `${day}/${month}/${year}`;
 }

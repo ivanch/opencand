@@ -1,31 +1,30 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
 import StatisticsSection from './components/StatisticsSection';
 import FeaturesSection from './components/FeaturesSection';
 import Footer from './components/Footer';
-import CandidatePage from './components/CandidatePage/CandidatePage';
-import DataStatsPage from './components/DataStatsPage';
-import StatisticsPage from './components/StatisticsPage';
-import SobrePage from './components/SobrePage';
 import NotFound from './components/NotFound';
 import MatrixBackground from './components/MatrixBackground';
+import ConsentBanner from './components/ConsentBanner';
 import './App.css';
+
+// Route-level code splitting: recharts and the secondary pages stay out of the main bundle
+// (CandidatePage is split too: it is the only importer of recharts)
+const CandidatePage = lazy(() => import('./components/CandidatePage/CandidatePage'));
+const DataStatsPage = lazy(() => import('./components/DataStatsPage'));
+const StatisticsPage = lazy(() => import('./components/StatisticsPage/StatisticsPage'));
+const SobrePage = lazy(() => import('./components/SobrePage'));
+
+const RouteFallback: React.FC = () => (
+  <div className="flex items-center justify-center py-32" role="status" aria-label="Carregando">
+    <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-400 border-t-transparent"></div>
+  </div>
+);
 
 // HomePage component
 const HomePage: React.FC = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    if (location.hash) {
-      const element = document.getElementById(location.hash.substring(1));
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  }, [location]);
-
   return (
     <main className="flex-grow">
       <HeroSection />
@@ -56,17 +55,20 @@ function App() {
       <Navbar />
       <div className="relative z-10 flex-1 flex flex-col">
         <div className="flex-1">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/candidato/:id" element={<CandidatePage />} />
-            <Route path="/dados-disponiveis" element={<DataStatsPage />} />
-            <Route path="/estatisticas" element={<StatisticsPage />} />
-            <Route path="/sobre" element={<SobrePage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/candidato/:id" element={<CandidatePage />} />
+              <Route path="/dados-disponiveis" element={<DataStatsPage />} />
+              <Route path="/estatisticas" element={<StatisticsPage />} />
+              <Route path="/sobre" element={<SobrePage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </div>
         <Footer />
       </div>
+      <ConsentBanner />
     </div>
   );
 }

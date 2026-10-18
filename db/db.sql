@@ -6,23 +6,34 @@ DROP TABLE IF EXISTS candidato CASCADE;
 DROP TABLE IF EXISTS partido CASCADE;
 DROP TABLE IF EXISTS despesas_candidato CASCADE;
 DROP TABLE IF EXISTS receitas_candidato CASCADE;
+DROP TABLE IF EXISTS candidato_alias CASCADE;
+DROP TABLE IF EXISTS etl_run CASCADE;
+
+CREATE EXTENSION IF NOT EXISTS tsm_system_rows;
 
 CREATE TABLE candidato (
     idcandidato UUID NOT NULL PRIMARY KEY,
     cpf VARCHAR(11),
     nome VARCHAR(255) NOT NULL,
-    datanascimento TIMESTAMPTZ,
-    sexo CHAR(15),
+    datanascimento DATE,
+    sexo VARCHAR(20),
     apelido VARCHAR(255),
     localidade VARCHAR(100),
     ultimoano INT,
     popularidade BIGINT DEFAULT 0
 );
-CREATE INDEX idx_candidato_nome ON candidato (nome);
 CREATE INDEX idx_candidato_apelido ON candidato (apelido);
 CREATE INDEX idx_candidato_datanascimento ON candidato (datanascimento);
 CREATE INDEX idx_candidato_nomenascimento ON candidato (nome, datanascimento);
 CREATE INDEX idx_candidato_cpf ON candidato (cpf);
+CREATE UNIQUE INDEX ux_candidato_cpf ON candidato (cpf) WHERE cpf IS NOT NULL;
+
+-- Merged duplicate candidatos: old public ids keep resolving to the canonical one
+CREATE TABLE candidato_alias (
+    old_id UUID NOT NULL PRIMARY KEY,
+    new_id UUID NOT NULL,
+    CONSTRAINT ck_candidato_alias_distinct CHECK (old_id <> new_id)
+);
 
 -- Each candidato (idcandidato, cpf, nome, ...) will be mapped to a (sqcandidato, ano, tipo_eleicao, sg_uf, cargo, resultado, ...) 
 CREATE TABLE candidato_mapping (
@@ -42,11 +53,11 @@ CREATE TABLE candidato_mapping (
     CONSTRAINT pk_candidato_mapping PRIMARY KEY (idcandidato, ano, siglauf, nomeue, cargo, nrcandidato, resultado),
     CONSTRAINT fk_candidato_mapping_candidato FOREIGN KEY (idcandidato) REFERENCES candidato(idcandidato) ON DELETE CASCADE ON UPDATE CASCADE
 );
-CREATE INDEX idx_candidato_mapping_idcandidato ON candidato_mapping (idcandidato);
 CREATE INDEX idx_candidato_mapping_cpf ON candidato_mapping (cpf);
 CREATE INDEX idx_candidato_mapping_nome ON candidato_mapping (nome);
 CREATE INDEX idx_candidato_mapping_ano ON candidato_mapping (ano);
 CREATE INDEX idx_candidato_mapping_sqcandidato ON candidato_mapping (sqcandidato);
+CREATE INDEX idx_candidato_mapping_ano_sqcandidato ON candidato_mapping (ano, sqcandidato);
 
 CREATE TABLE candidato_ext (
     idcandidato UUID NOT NULL,
@@ -56,9 +67,9 @@ CREATE TABLE candidato_ext (
     estadocivil VARCHAR(50),
     escolaridade VARCHAR(50),
     ocupacao TEXT,
-    CONSTRAINT pk_candidato_ext PRIMARY KEY (idcandidato, ano)
+    CONSTRAINT pk_candidato_ext PRIMARY KEY (idcandidato, ano),
+    CONSTRAINT fk_candidato_ext_candidato FOREIGN KEY (idcandidato) REFERENCES candidato(idcandidato) ON DELETE CASCADE ON UPDATE CASCADE
 );
-CREATE INDEX idx_candidato_ext_idcandidato ON candidato_ext (idcandidato);
 CREATE INDEX idx_candidato_ext_ano ON candidato_ext (ano);
 
 CREATE TABLE bem_candidato (
@@ -71,7 +82,6 @@ CREATE TABLE bem_candidato (
     CONSTRAINT fk_bem_candidato_candidato FOREIGN KEY (idcandidato) REFERENCES candidato(idcandidato) ON DELETE CASCADE ON UPDATE CASCADE
 );
 ALTER TABLE bem_candidato ADD CONSTRAINT pk_bem_candidato PRIMARY KEY (idcandidato, ano, ordembem);
-CREATE INDEX idx_bem_candidato_idcandidato ON bem_candidato (idcandidato);
 CREATE INDEX idx_bem_candidato_valor ON bem_candidato (valor);
 
 CREATE TABLE rede_social (
@@ -80,10 +90,9 @@ CREATE TABLE rede_social (
     siglauf VARCHAR(2),
     ano INT NOT NULL,
     link TEXT NOT NULL,
-    CONSTRAINT pk_rede_social PRIMARY KEY (idcandidato, rede, siglauf, ano),
+    CONSTRAINT pk_rede_social PRIMARY KEY (idcandidato, ano, link),
     CONSTRAINT fk_rede_social_candidato FOREIGN KEY (idcandidato) REFERENCES candidato(idcandidato) ON DELETE CASCADE ON UPDATE CASCADE
 );
-CREATE INDEX idx_rede_social_idcandidato ON rede_social (idcandidato);
 
 CREATE TABLE partido (
     sigla VARCHAR(50) NOT NULL PRIMARY KEY,
@@ -146,7 +155,13 @@ CREATE INDEX idx_receitas_candidato_ano ON receitas_candidato (ano);
 CREATE INDEX idx_receitas_candidato_sqcandidato ON receitas_candidato (sqcandidato);
 CREATE INDEX idx_receitas_candidato_sgpartido ON receitas_candidato (sgpartido);
 
-
+-- ETL run log (used by the API to invalidate caches after a load)
+CREATE TABLE etl_run (
+    id SERIAL PRIMARY KEY,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    finished_at TIMESTAMPTZ,
+    status TEXT NOT NULL DEFAULT 'running'
+);
 
 -- Search function
 CREATE EXTENSION IF NOT EXISTS pg_trgm;

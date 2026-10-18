@@ -3,7 +3,6 @@ import { LinkIcon } from '@heroicons/react/24/outline';
 import { 
   FaFacebook, 
   FaInstagram, 
-  FaTwitter, 
   FaTiktok, 
   FaYoutube, 
   FaLinkedin, 
@@ -19,6 +18,16 @@ interface SocialMediaComponentProps {
   redesSociais: RedeSocial[] | null;
   isLoading: boolean;
 }
+
+// Only http(s) links become anchors: the link text comes from the API, so e.g. a javascript: URL must never be clickable
+const isHttpUrl = (value: string): boolean => {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
 
 // Helper function to get social media icons
 const getSocialMediaIcon = (rede: string, isRecent: boolean = true): React.ReactElement => {
@@ -94,18 +103,22 @@ const SocialMediaComponent: React.FC<SocialMediaComponentProps> = ({
                       </span>
                       <span className="text-sm text-gray-500">({redeSocial.ano})</span>
                     </div>
-                    <a 
-                      href={redeSocial.link} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className={`text-sm break-all transition-colors ${
-                        isRecent 
-                          ? 'text-blue-600 hover:text-blue-800' 
-                          : 'text-blue-400 hover:text-blue-600'
-                      }`}
-                    >
-                      {redeSocial.link}
-                    </a>
+                    {isHttpUrl(redeSocial.link) ? (
+                      <a 
+                        href={redeSocial.link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className={`text-sm break-all transition-colors ${
+                          isRecent 
+                            ? 'text-blue-600 hover:text-blue-800' 
+                            : 'text-blue-400 hover:text-blue-600'
+                        }`}
+                      >
+                        {redeSocial.link}
+                      </a>
+                    ) : (
+                      <span className="text-sm break-all text-gray-600">{redeSocial.link}</span>
+                    )}
                   </div>
                 </div>
               </div>

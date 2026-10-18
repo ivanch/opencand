@@ -7,6 +7,7 @@ using OpenCand.Core.Models;
 namespace OpenCand.API.Controllers
 {
     [EnableRateLimiting(RateLimitingConfig.DefaultPolicy)]
+    [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any)]
     public class StatsController : BaseController
     {
         private readonly OpenCandService openCandService;

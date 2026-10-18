@@ -20,6 +20,6 @@
         public DateTime? DataDespesa { get; set; }
         public string OrigemDespesa { get; set; }
         public string Descricao { get; set; }
-        public float Valor { get; set; }
+        public decimal Valor { get; set; }
     }
 }

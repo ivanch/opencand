@@ -17,9 +17,26 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Thrown when a request is cancelled by the caller through its AbortSignal.
+ * Callers should swallow it (see isRequestCancelled): it is not a failure to show to the user.
+ */
+export class RequestCancelledError extends Error {
+  constructor() {
+    super('Request cancelled');
+    this.name = 'RequestCancelledError';
+  }
+}
+
+export const isRequestCancelled = (error: unknown): boolean =>
+  error instanceof RequestCancelledError ||
+  (error instanceof Error && error.name === 'AbortError');
+
 export interface ApiRequestConfig {
   headers?: Record<string, string>;
   timeout?: number;
+  /** Aborts the request when triggered; the promise rejects with RequestCancelledError. */
+  signal?: AbortSignal;
 }
 
 export class BaseApiClient {
@@ -29,10 +46,8 @@ export class BaseApiClient {
 
   constructor(baseUrl: string, defaultHeaders: Record<string, string> = {}) {
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    this.defaultHeaders = {
-      'Content-Type': 'application/json',
-      ...defaultHeaders,
-    };
+    // Content-Type is only sent on requests with a body: setting it on GETs forces a CORS preflight.
+    this.defaultHeaders = { ...defaultHeaders };
     this.timeout = 30000; // 30 seconds default timeout
   }
 
@@ -75,6 +90,9 @@ export class BaseApiClient {
       const errorData = await response.json();
       if (errorData.message) {
         errorMessage = errorData.message;
+      } else if (errorData.detail || errorData.title) {
+        // ASP.NET ProblemDetails
+        errorMessage = errorData.detail || errorData.title;
       } else if (errorData.error) {
         errorMessage = errorData.error;
       }
@@ -131,7 +149,11 @@ export class BaseApiClient {
     config: ApiRequestConfig = {}
   ): Promise<T> {
     const url = this.buildUrl(endpoint);
-    const headers = { ...this.defaultHeaders, ...config.headers };
+    const headers: Record<string, string> = {
+      ...this.defaultHeaders,
+      ...(data !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...config.headers,
+    };
     const timeout = config.timeout || this.timeout;
 
     const requestInit: RequestInit = {
@@ -143,9 +165,15 @@ export class BaseApiClient {
       requestInit.body = JSON.stringify(data);
     }
 
-    // Create an AbortController for timeout handling
+    if (config.signal?.aborted) {
+      throw new RequestCancelledError();
+    }
+
+    // The controller is aborted either by the timeout or by the caller's signal
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), timeout);
+    const onCallerAbort = () => controller.abort();
+    config.signal?.addEventListener('abort', onCallerAbort, { once: true });
 
     try {
       const response = await fetch(url, {
@@ -173,6 +201,10 @@ export class BaseApiClient {
         throw error;
       }
 
+      if (config.signal?.aborted) {
+        throw new RequestCancelledError();
+      }
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new ApiError('Request timeout', 408);
       }
@@ -182,6 +214,8 @@ export class BaseApiClient {
       }
 
       throw new ApiError('Unknown error occurred', 0);
+    } finally {
+      config.signal?.removeEventListener('abort', onCallerAbort);
     }
   }
 }

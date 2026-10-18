@@ -11,6 +11,8 @@ RUN dotnet restore src/OpenCand.ETL/OpenCand.ETL.csproj
 # Copy source code and build
 COPY src/OpenCand.ETL/. src/OpenCand.ETL/
 COPY src/OpenCand.Core/. src/OpenCand.Core/
+# embedded by the ETL project (materialized view definitions)
+COPY db/mv.sql db/mv.sql
 
 WORKDIR /src/src/OpenCand.ETL
 RUN dotnet publish -c Release -o /app/publish

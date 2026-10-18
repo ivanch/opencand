@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MagnifyingGlassIcon, XMarkIcon, MapPinIcon } from '@heroicons/react/24/solid';
 import { useNavigate } from 'react-router-dom';
-import { openCandApi, type Candidate, ApiError } from '../api';
+import { openCandApi, type Candidate, ApiError, isRequestCancelled } from '../api';
 import { formatDateToDDMMYYYY, maskCpf } from '../utils/utils';
 
 interface SearchBarProps {
@@ -18,26 +18,40 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = '' }) => {
   const [activeIndex, setActiveIndex] = useState(-1);
   const navigate = useNavigate();
   const searchTimeoutRef = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const resultsContainerRef = useRef<HTMLDivElement>(null);
 
+  // Cancels the in-flight search (if any) so its response can never overwrite a newer one
+  const cancelPendingSearch = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+  }, []);
+
   // Debounced search function
   const performSearch = useCallback(async (query: string) => {
-    if (query.trim().length < 2) {
+    cancelPendingSearch();
+
+    if (query.trim().length < 3) {
       setSearchResults([]);
       setShowResults(false);
       setError(null);
+      setIsLoading(false);
       return;
     }
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = await openCandApi.searchCandidates(query.trim());
+      const result = await openCandApi.searchCandidates(query.trim(), controller.signal);
       setSearchResults(result.candidatos); // Limit to 8 results
       setShowResults(true);
     } catch (err) {
+      if (controller.signal.aborted || isRequestCancelled(err)) return;
       if (err instanceof ApiError) {
         setError(`Erro na busca: ${err.message}`);
       } else {
@@ -46,32 +60,41 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = '' }) => {
       setSearchResults([]);
       setShowResults(false);
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted) {
+        setIsLoading(false);
+      }
     }
-  }, []);
+  }, [cancelPendingSearch]);
 
   // Handle input change with debouncing
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
 
-    // Clear previous timeout
+    // Clear previous timeout and drop any request that is now outdated
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
+    cancelPendingSearch();
+    setIsLoading(false);
 
     // Set new timeout for debounced search
     searchTimeoutRef.current = window.setTimeout(() => {
       performSearch(query);
     }, 300); // 300ms delay
-  }, [performSearch]);
+  }, [performSearch, cancelPendingSearch]);
 
   // Handle candidate selection
   const handleCandidateSelect = useCallback((candidate: Candidate) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    cancelPendingSearch();
+    setIsLoading(false);
     navigate(`/candidato/${candidate.idCandidato}`);
     setShowResults(false);
     setSearchQuery('');
-  }, [navigate]);
+  }, [navigate, cancelPendingSearch]);
 
   // Handle form submission
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -145,12 +168,13 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = '' }) => {
     return desc.filter(Boolean).join(' | ');
   }
 
-  // Clear timeout on unmount
+  // Clear timeout and abort the in-flight request on unmount
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
+      abortRef.current?.abort();
     };
   }, []);
 
@@ -181,6 +205,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = '' }) => {
             <button
               type="button"
               onClick={() => {
+                if (searchTimeoutRef.current) {
+                  clearTimeout(searchTimeoutRef.current);
+                }
+                cancelPendingSearch();
+                setIsLoading(false);
                 setSearchQuery('');
                 setSearchResults([]);
                 setShowResults(false);
@@ -234,7 +263,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = '' }) => {
       )}
 
       {/* No results message */}
-      {showResults && searchResults.length === 0 && !error && !isLoading && searchQuery.length >= 2 && (
+      {showResults && searchResults.length === 0 && !error && !isLoading && searchQuery.trim().length >= 3 && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50 animate-fadeIn">
           <div className="p-4 text-gray-600 text-center">
             Nenhum candidato encontrado para "{searchQuery}"

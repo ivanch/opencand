@@ -21,6 +21,6 @@
         public string MunicipioDoador { get; set; }
         public DateTime? DataReceita { get; set; }
         public string Descricao { get; set; }
-        public float Valor { get; set; }
+        public decimal Valor { get; set; }
     }
 }

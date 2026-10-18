@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createAnimationLoop, type AnimationLoop } from '../utils/animationLoop';
 
 interface Dot {
   x: number;
@@ -21,7 +22,7 @@ interface Connection {
 
 const MatrixBackground: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>(0);
+  const loopRef = useRef<AnimationLoop | null>(null);
   const dotsRef = useRef<Dot[]>([]);
   const connectionsRef = useRef<Connection[]>([]);
   const mouseRef = useRef({ x: 0, y: 0 });
@@ -247,7 +248,6 @@ const MatrixBackground: React.FC = () => {
       ctx.shadowBlur = 0;
     });
 
-    animationRef.current = requestAnimationFrame(animate);
   };
 
   // Handle resize
@@ -270,6 +270,7 @@ const MatrixBackground: React.FC = () => {
     // Reinitialize dots for new dimensions
     dotsRef.current = initializeDots(window.innerWidth, window.innerHeight);
     connectionsRef.current = calculateConnections(dotsRef.current);
+    loopRef.current?.redrawIfStatic();
     
     if (process.env.NODE_ENV === 'development') {
       console.log(`MatrixBackground: Canvas resized to ${window.innerWidth}x${window.innerHeight}`);
@@ -300,15 +301,11 @@ const MatrixBackground: React.FC = () => {
     // Initial setup
     handleResize();
     
-    // Start animation
-    const startAnimation = () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-      animationRef.current = requestAnimationFrame(animate);
-    };
-    
-    startAnimation();
+    // Start animation: capped at 30fps, paused while the tab is hidden,
+    // a single static frame under prefers-reduced-motion
+    const loop = createAnimationLoop(animate);
+    loopRef.current = loop;
+    loop.start();
 
     // Event listeners
     window.addEventListener('resize', handleResize);
@@ -319,9 +316,8 @@ const MatrixBackground: React.FC = () => {
     }
 
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      loop.stop();
+      loopRef.current = null;
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('mousemove', handleMouseMove);
       if (process.env.NODE_ENV === 'development') {

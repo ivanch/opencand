@@ -88,7 +88,13 @@ export interface Partido {
   numero: number;
 }
 
-export interface CandidateExpenses {
+export interface PageInfo {
+  page?: number;
+  pageSize?: number;
+  total?: number;
+}
+
+export interface CandidateExpenses extends PageInfo {
   despesas: Expense[];
 }
 
@@ -112,8 +118,19 @@ export interface Expense {
   valor: number;
 }
 
-export interface CandidateIncome {
+export interface CandidateIncome extends PageInfo {
   receitas: Income[];
+}
+
+/** Totals of despesas or receitas for one election year (GET .../despesas/resumo, .../receitas/resumo). */
+export interface YearSummary {
+  ano: number;
+  quantidade: number;
+  total: number;
+}
+
+export interface FinanceSummary {
+  resumo: YearSummary[];
 }
 
 export interface Income {

@@ -1,6 +1,6 @@
 
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { initializeApp, type FirebaseApp } from "firebase/app";
+import type { Analytics } from "firebase/analytics";
 
 declare global {
   interface Window {
@@ -25,14 +25,26 @@ const firebaseConfig = {
   measurementId: getEnv('VITE_FIREBASE_MEASUREMENT_ID')
 };
 
-let app = null;
-let analytics = null;
+let app: FirebaseApp | null = null;
+let analytics: Analytics | null = null;
 
 if (firebaseConfig.projectId) {
   app = initializeApp(firebaseConfig);
-  analytics = getAnalytics(app);
 } else {
   console.warn("Firebase project ID is not set. Firebase will not be initialized.");
 }
 
-export { app, analytics };
+/** True when Firebase is configured with a measurement id, i.e. analytics could be started. */
+export const analyticsAvailable = !!app && !!firebaseConfig.measurementId;
+
+/**
+ * Starts Firebase Analytics. Must only be called after the visitor consented (see ConsentBanner):
+ * the analytics SDK is loaded lazily here, so nothing is fetched or sent before that.
+ */
+export const initAnalytics = async (): Promise<void> => {
+  if (!app || !analyticsAvailable || analytics) return;
+  const { getAnalytics } = await import("firebase/analytics");
+  analytics ??= getAnalytics(app);
+};
+
+export { app };

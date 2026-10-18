@@ -1,43 +1,44 @@
+using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using OpenCand.Config;
-using OpenCand.ETL.Contracts;
-using OpenCand.ETL.Parser.ParserServices;
-using OpenCand.ETL.Repository;
-using OpenCand.ETL.Services;
-using OpenCand.Parser;
-using OpenCand.Parser.Models;
-using OpenCand.Parser.Services;
-using OpenCand.Repository;
-using OpenCand.Services;
+using OpenCand.ETL.Database;
+using OpenCand.ETL.Loading;
+using OpenCand.ETL.Pipeline;
 
 namespace OpenCand
 {
     public class Program
     {
-        static async Task Main(string[] args)
+        /// <summary>
+        /// Usage: OpenCand.ETL [--only candidatos,bens,redes,despesas,receitas] [--Etl:RebuildViews=true]
+        /// Exit code: 0 success, 1 failure, 2 invalid arguments.
+        /// </summary>
+        static async Task<int> Main(string[] args)
         {
-            var host = CreateHostBuilder(args).Build();
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-            using (var scope = host.Services.CreateScope())
+            using var host = CreateHostBuilder(args).Build();
+            var logger = host.Services.GetRequiredService<ILogger<Program>>();
+
+            using var cts = new CancellationTokenSource();
+            Console.CancelKeyPress += (_, e) =>
             {
-                var services = scope.ServiceProvider;
-                var logger = services.GetRequiredService<ILogger<Program>>();
+                e.Cancel = true;
+                cts.Cancel();
+            };
 
-                try
-                {
-                    logger.LogInformation("Starting data parsing");
-                    var parserManager = services.GetRequiredService<ParserManager>();
-                    await parserManager.ParseFullDataAsync();
-
-                    logger.LogInformation("Data parsing completed successfully!");
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "An error occurred during application startup");
-                }
+            try
+            {
+                return await host.Services.GetRequiredService<EtlRunner>().RunAsync(cts.Token);
+            }
+            catch (Exception ex)
+            {
+                logger.LogCritical(ex, "ETL aborted");
+                return 1;
             }
         }
 
@@ -49,41 +50,29 @@ namespace OpenCand
                         ? Directory.GetCurrentDirectory()
                         : AppContext.BaseDirectory;
                     config.SetBasePath(basePath);
-                    config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+                    config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: false);
                     config.AddJsonFile($"appsettings.{hostingContext.HostingEnvironment.EnvironmentName}.json", optional: true);
                     config.AddEnvironmentVariables();
                     config.AddCommandLine(args);
-
-                    System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    // Configuration
                     services.Configure<CsvSettings>(hostContext.Configuration.GetSection("CsvSettings"));
+                    services.Configure<EtlSettings>(hostContext.Configuration.GetSection("Etl"));
 
-                    // Services
-                    services.AddTransient<IParserService<CandidatoCSV>, CandidatoParserService>();
-                    services.AddTransient<IParserService<BemCandidatoCSV>, BemCandidatoParserService>();
-                    services.AddTransient<IParserService<RedeSocialCSV>, RedeSocialParserService>();
-                    services.AddTransient<IParserService<DespesasCSV>, DespesaParserService>();
-                    services.AddTransient<IParserService<ReceitasCSV>, ReceitaParserService>();
-                    services.AddTransient<CsvParserService<CandidatoCSV>>();
-                    services.AddTransient<CsvParserService<BemCandidatoCSV>>();
-                    services.AddTransient<CsvParserService<RedeSocialCSV>>();
-                    services.AddTransient<CsvParserService<DespesasCSV>>();
-                    services.AddTransient<CsvParserService<ReceitasCSV>>();
-                    services.AddTransient<ParserManager>();
-                    services.AddTransient<DespesaReceitaService>();
-                    services.AddTransient<CandidatoService>();
-                    services.AddTransient<BemCandidatoService>();
-                    services.AddTransient<RedeSocialService>();
-                    services.AddTransient<DespesaReceitaRepository>();
-                    services.AddTransient<CandidatoRepository>();
-                    services.AddTransient<BemCandidatoRepository>();
-                    services.AddTransient<RedeSocialRepository>();
-                    services.AddTransient<PartidoRepository>();
-                    services.AddTransient<CsvFixerService>();
-                    services.AddTransient<ViewRepository>();
+                    var connectionString = hostContext.Configuration["DatabaseSettings:ConnectionString"]
+                        ?? throw new InvalidOperationException("DatabaseSettings:ConnectionString is not configured.");
+                    services.AddSingleton(NpgsqlDataSource.Create(connectionString));
+
+                    services.AddSingleton<SqIndex>();
+                    services.AddSingleton<MaterializedViews>();
+                    services.AddSingleton<EtlRunLog>();
+                    services.AddSingleton<CandidatoLoader>();
+                    services.AddSingleton<BemCandidatoLoader>();
+                    services.AddSingleton<RedeSocialLoader>();
+                    services.AddSingleton<DespesaLoader>();
+                    services.AddSingleton<ReceitaLoader>();
+                    services.AddSingleton<EtlRunner>();
                 });
     }
 }

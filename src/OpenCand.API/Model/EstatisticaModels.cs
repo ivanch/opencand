@@ -4,11 +4,11 @@
     {
         public Guid IdCandidato { get; set; }
         public string Nome { get; set; }
-        public float PatrimonioInicial { get; set; }
+        public decimal PatrimonioInicial { get; set; }
         public int AnoInicial { get; set; }
-        public float PatrimonioFinal { get; set; }
+        public decimal PatrimonioFinal { get; set; }
         public int AnoFinal { get; set; }
-        public float Enriquecimento { get; set; }
+        public decimal Enriquecimento { get; set; }
     }
 
     public class GetValueSumRequest

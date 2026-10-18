@@ -92,6 +92,6 @@ namespace OpenCand.Parser.Models
         public string DescricaoDespesa { get; set; }
 
         [Name("VR_DESPESA_CONTRATADA")]
-        public float ValorDespesaContratada { get; set; }
+        public string? ValorDespesaContratada { get; set; }
     }
 }

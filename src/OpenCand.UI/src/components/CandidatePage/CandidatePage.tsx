@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import { openCandApi, type CandidateDetails, type CandidateAssets, type CandidateRedesSociais, type CandidateExpenses, type CandidateIncome, ApiError } from '../../api';
+import { openCandApi, type CandidateDetails, type CandidateAssets, type CandidateRedesSociais, ApiError, isRequestCancelled } from '../../api';
 import ElectionsComponent from './ElectionsComponent';
 import AssetsComponent from './AssetsComponent';
 import BasicCandidateInfoComponent from './BasicCandidateInfoComponent';
@@ -17,13 +17,9 @@ const CandidatePage: React.FC = () => {
   const [candidateDetails, setCandidateDetails] = useState<CandidateDetails | null>(null);
   const [candidateAssets, setCandidateAssets] = useState<CandidateAssets | null>(null);
   const [candidateRedesSociais, setCandidateRedesSociais] = useState<CandidateRedesSociais | null>(null);
-  const [candidateExpenses, setCandidateExpenses] = useState<CandidateExpenses | null>(null);
-  const [candidateIncome, setCandidateIncome] = useState<CandidateIncome | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(true);
   const [isLoadingAssets, setIsLoadingAssets] = useState(true);
   const [isLoadingRedesSociais, setIsLoadingRedesSociais] = useState(true);
-  const [isLoadingExpenses, setIsLoadingExpenses] = useState(true);
-  const [isLoadingIncome, setIsLoadingIncome] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,13 +28,28 @@ const CandidatePage: React.FC = () => {
       return;
     }
 
+    // Everything below belongs to this id: the cleanup aborts all of its requests,
+    // so a slow response for a previous candidate can never overwrite the current one.
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    // Reset ALL state (data, loading flags and error) when the route id changes
+    setCandidateDetails(null);
+    setCandidateAssets(null);
+    setCandidateRedesSociais(null);
+    setIsLoadingDetails(true);
+    setIsLoadingAssets(true);
+    setIsLoadingRedesSociais(true);
+    setError(null);
+
     // Fetch candidate details
     const fetchCandidateDetails = async () => {
       try {
-        setIsLoadingDetails(true);
-        const details = await openCandApi.getCandidateById(id);
+        const details = await openCandApi.getCandidateById(id, signal);
+        if (signal.aborted) return;
         setCandidateDetails(details);
       } catch (err) {
+        if (signal.aborted || isRequestCancelled(err)) return;
         console.error('Error fetching candidate details:', err);
         if (err instanceof ApiError) {
           setError(`Erro ao carregar dados do candidato: ${err.message}`);
@@ -46,71 +57,34 @@ const CandidatePage: React.FC = () => {
           setError('Erro inesperado ao carregar dados do candidato');
         }
       } finally {
-        setIsLoadingDetails(false);
+        if (!signal.aborted) setIsLoadingDetails(false);
       }
     };
 
-    // Fetch candidate assets
-    const fetchCandidateAssets = async () => {
+    // Secondary sections might not be available for all candidates, so a failure is not surfaced as page error
+    const fetchOptional = async <T,>(
+      label: string,
+      request: () => Promise<T>,
+      onData: (data: T) => void,
+      onDone: () => void
+    ) => {
       try {
-        setIsLoadingAssets(true);
-        const assets = await openCandApi.getCandidateAssets(id);
-        setCandidateAssets(assets);
+        const data = await request();
+        if (signal.aborted) return;
+        onData(data);
       } catch (err) {
-        console.error('Error fetching candidate assets:', err);
-        // Assets might not be available for all candidates, so we don't set error here
+        if (signal.aborted || isRequestCancelled(err)) return;
+        console.error(`Error fetching candidate ${label}:`, err);
       } finally {
-        setIsLoadingAssets(false);
-      }
-    };
-
-    // Fetch candidate social media
-    const fetchCandidateRedesSociais = async () => {
-      try {
-        setIsLoadingRedesSociais(true);
-        const redesSociais = await openCandApi.getCandidateRedesSociais(id);
-        setCandidateRedesSociais(redesSociais);
-      } catch (err) {
-        console.error('Error fetching candidate social media:', err);
-        // Social media might not be available for all candidates, so we don't set error here
-      } finally {
-        setIsLoadingRedesSociais(false);
-      }
-    };
-
-    // Fetch candidate expenses
-    const fetchCandidateExpenses = async () => {
-      try {
-        setIsLoadingExpenses(true);
-        const expenses = await openCandApi.getCandidateDepesas(id);
-        setCandidateExpenses(expenses);
-      } catch (err) {
-        console.error('Error fetching candidate expenses:', err);
-        // Expenses might not be available for all candidates, so we don't set error here
-      } finally {
-        setIsLoadingExpenses(false);
-      }
-    };
-
-    // Fetch candidate income
-    const fetchCandidateIncome = async () => {
-      try {
-        setIsLoadingIncome(true);
-        const income = await openCandApi.getCandidateReceitas(id);
-        setCandidateIncome(income);
-      } catch (err) {
-        console.error('Error fetching candidate income:', err);
-        // Income might not be available for all candidates, so we don't set error here
-      } finally {
-        setIsLoadingIncome(false);
+        if (!signal.aborted) onDone();
       }
     };
 
     fetchCandidateDetails();
-    fetchCandidateAssets();
-    fetchCandidateRedesSociais();
-    fetchCandidateExpenses();
-    fetchCandidateIncome();
+    fetchOptional('assets', () => openCandApi.getCandidateAssets(id, signal), setCandidateAssets, () => setIsLoadingAssets(false));
+    fetchOptional('social media', () => openCandApi.getCandidateRedesSociais(id, signal), setCandidateRedesSociais, () => setIsLoadingRedesSociais(false));
+
+    return () => controller.abort();
   }, [id, navigate]);
 
   if (error) {
@@ -179,12 +153,7 @@ const CandidatePage: React.FC = () => {
           />
           
           {/* Income and Expenses Panel */}
-          <IncomeExpenseComponent 
-            expenses={candidateExpenses}
-            income={candidateIncome}
-            isLoadingExpenses={isLoadingExpenses}
-            isLoadingIncome={isLoadingIncome}
-          />
+          {id && <IncomeExpenseComponent key={id} idCandidato={id} />}
         </div>
       </div>
     </main>

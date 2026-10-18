@@ -1,7 +1,7 @@
-import React, { use, useState } from 'react';
+import React, { useState } from 'react';
 import { UserIcon } from '@heroicons/react/24/outline';
 import { type CandidateDetails, openCandApi } from '../../api';
-import { formatCpf, maskCpf } from '../../utils/utils';
+import { formatCpf, formatDateToDDMMYYYY, maskCpf } from '../../utils/utils';
 
 interface BasicCandidateInfoComponentProps {
   candidateDetails: CandidateDetails | null;
@@ -21,14 +21,7 @@ const BasicCandidateInfoComponent: React.FC<BasicCandidateInfoComponentProps> = 
     }
   }, [candidateDetails]);
 
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('pt-BR');
-    } catch {
-      return dateString;
-    }
-  };
+  const formatDate = (dateString: string) => formatDateToDDMMYYYY(dateString) || dateString;
 
   const handleCpfClick = async () => {
     if (!candidateDetails?.idCandidato || isRevealingCpf || revealedCpf) return;
@@ -36,17 +29,15 @@ const BasicCandidateInfoComponent: React.FC<BasicCandidateInfoComponentProps> = 
     setIsRevealingCpf(true);
     try {
       const cpfResult = await openCandApi.getCandidateCpf(candidateDetails?.idCandidato || '');
-      setRevealedCpf(formatCpf(cpfResult.cpf));
+      if (cpfResult?.cpf) {
+        setRevealedCpf(formatCpf(cpfResult.cpf));
+      }
     } catch (error) {
       console.error('Failed to reveal CPF:', error);
     } finally {
       setIsRevealingCpf(false);
     }
   };
-
-  const getDetailsList = () => {
-    if (!candidateDetails) return null;
-  }
 
   const getHistoricalData = () => {
     if (!candidateDetails?.candidatoExt || candidateDetails.candidatoExt.length === 0) {

@@ -21,7 +21,9 @@ const RandomCandButton: React.FC<RandomCandButtonProps> = ({
     setLoading(true);
     try {
       const randomCandidate = await openCandApi.getRandomCandidate();
-      navigate(`/candidato/${randomCandidate.idCandidato}`);
+      if (randomCandidate?.idCandidato) {
+        navigate(`/candidato/${randomCandidate.idCandidato}`);
+      }
     } catch (error) {
       console.error('Erro ao buscar candidato aleatório:', error);
       // You might want to show a toast notification or error message to the user

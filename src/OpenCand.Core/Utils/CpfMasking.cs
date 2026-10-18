@@ -1,12 +1,12 @@
-﻿namespace OpenCand.Core.Utils
+namespace OpenCand.Core.Utils
 {
     public static class CpfMasking
     {
         /// <summary>
-        /// Masks a CPF number by replacing the middle 3 digits with '*'
+        /// Masks an 11-digit CPF, keeping only the 6 middle digits: 12345678901 becomes ***.456.789-**
         /// </summary>
         /// <param name="cpf">The CPF number to mask.</param>
-        /// <returns>The masked CPF number.</returns>
+        /// <returns>The masked CPF number, or the input unchanged when it is not an 11-character value.</returns>
         public static string MaskCpf(string cpf)
         {
             if (string.IsNullOrEmpty(cpf) || cpf.Length != 11)
@@ -14,8 +14,7 @@
                 return cpf;
             }
 
-            // Mask the middle 3 digits
-            return $"{cpf.Substring(0, 3)}***{cpf.Substring(6)}";
+            return $"***.{cpf.Substring(3, 3)}.{cpf.Substring(6, 3)}-**";
         }
     }
 }

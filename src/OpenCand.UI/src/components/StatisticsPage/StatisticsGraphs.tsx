@@ -1,5 +1,6 @@
 import React from 'react';
 import type { StatisticsData } from './statisticsRequests';
+import type { EnrichmentResponse, ValueSumResponse } from '../../api/apiStatisticsModels';
 import WhiteCard from '../../shared/WhiteCard';
 
 interface StatisticsGraphsProps {
@@ -50,7 +51,7 @@ const StatisticsGraphs: React.FC<StatisticsGraphsProps> = ({
     );
   }
 
-  const renderDataTable = (title: string, data: any[], type: 'candidate' | 'party' | 'state' | 'enrichment') => {
+  const renderDataTable = (title: string, data: ReadonlyArray<ValueSumResponse | EnrichmentResponse> | null, type: 'candidate' | 'party' | 'state' | 'enrichment') => {
     if (!data || data.length === 0) {
       return (
         <WhiteCard>
@@ -63,7 +64,7 @@ const StatisticsGraphs: React.FC<StatisticsGraphsProps> = ({
     }
 
     if (type === 'enrichment') {
-      const enrichmentData = data[currentEnrichmentIndex]; // Use current index instead of always first item
+      const enrichmentData = data[currentEnrichmentIndex] as EnrichmentResponse; // Use current index instead of always first item
       const hasMultipleItems = data.length > 1;
       
       const handleNext = () => {
@@ -190,7 +191,7 @@ const StatisticsGraphs: React.FC<StatisticsGraphsProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {data.slice(0, 5).map((item, index) => (
+                {(data as ValueSumResponse[]).slice(0, 5).map((item, index) => (
                   <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150">
                     {type === 'candidate' && (
                       <a href={`/candidato/${item.idCandidato}`}

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -8,14 +8,21 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CsvHelper" Version="33.1.0" />
-    <PackageReference Include="Dapper" Version="2.1.66" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.5" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.5" />
     <PackageReference Include="Npgsql" Version="9.0.3" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.5" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OpenCand.Core\OpenCand.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- db/mv.sql is the single source of truth for the materialized views -->
+    <EmbeddedResource Include="..\..\db\mv.sql" LogicalName="mv.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OpenCand.Tests" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,8 +1,7 @@
-﻿using Microsoft.Extensions.Options;
-using OpenCand.API.Config;
-using OpenCand.API.Model;
+﻿using OpenCand.API.Model;
 using OpenCand.API.Repository;
 using OpenCand.Core.Models;
+using OpenCand.Core.Utils;
 using OpenCand.Repository;
 
 namespace OpenCand.API.Services
@@ -14,7 +13,8 @@ namespace OpenCand.API.Services
         private readonly BemCandidatoRepository bemCandidatoRepository;
         private readonly DespesaReceitaRepository despesaReceitaRepository;
         private readonly IConfiguration configuration;
-        private readonly FotosSettings fotoSettings;
+        private readonly FotoLocator fotoLocator;
+        private readonly PopularityTracker popularityTracker;
         private readonly ILogger<OpenCandService> logger;
 
         public OpenCandService(
@@ -22,7 +22,8 @@ namespace OpenCand.API.Services
             CandidatoRepository candidatoRepository,
             BemCandidatoRepository bemCandidatoRepository,
             DespesaReceitaRepository despesaReceitaRepository,
-            IOptions<FotosSettings> fotoSettings,
+            FotoLocator fotoLocator,
+            PopularityTracker popularityTracker,
             IConfiguration configuration,
             ILogger<OpenCandService> logger)
         {
@@ -30,7 +31,8 @@ namespace OpenCand.API.Services
             this.candidatoRepository = candidatoRepository;
             this.bemCandidatoRepository = bemCandidatoRepository;
             this.despesaReceitaRepository = despesaReceitaRepository;
-            this.fotoSettings = fotoSettings.Value;
+            this.fotoLocator = fotoLocator;
+            this.popularityTracker = popularityTracker;
             this.configuration = configuration;
             this.logger = logger;
         }
@@ -73,53 +75,40 @@ namespace OpenCand.API.Services
             };
         }
 
-        public async Task<Guid?> GetRandomCandidato()
+        public async Task<Guid> GetRandomCandidato()
         {
             logger.LogInformation("Getting random candidato");
 
-            return await candidatoRepository.GetRandomCandidatoIdAsync();
+            return await candidatoRepository.GetRandomCandidatoIdAsync()
+                ?? throw new KeyNotFoundException("No candidatos available.");
         }
 
         public async Task<Candidato> GetCandidatoAsync(Guid idcandidato)
         {
-            var result = await candidatoRepository.GetCandidatoAsync(idcandidato);
-            var eleicoes = await candidatoRepository.GetCandidatoMappingById(idcandidato);
-            var candidatoExt = await candidatoRepository.GetCandidatoExtById(idcandidato);
+            var detail = await candidatoRepository.GetCandidatoDetailAsync(idcandidato);
 
-            try
-            {
-                await candidatoRepository.IncreaseCandidatoPopularity(idcandidato);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, $"Error increasing popularity for Candidato ID {idcandidato}");
-            }
-
-            if (result == null)
+            if (detail == null)
             {
                 throw new KeyNotFoundException($"Candidato with ID {idcandidato} not found.");
             }
-            if (eleicoes == null || eleicoes.Count == 0)
+            if (detail.Eleicoes.Count == 0)
             {
                 throw new KeyNotFoundException($"CandidatoMapping for ID {idcandidato} not found.");
             }
-            if (candidatoExt == null)
-            {
-                throw new KeyNotFoundException($"CandidatoExt for ID {idcandidato} not found.");
-            }
 
-            foreach (var eleicao in eleicoes)
-            {
-                eleicao.Partido = await candidatoRepository.GetPartidoBySigla(eleicao.Sgpartido);
-            }
+            var result = detail.Candidato;
 
-            var lastEleicao = eleicoes.OrderByDescending(e => e.Ano).First();
+            // Counted in memory and flushed to the database by PopularityFlushService.
+            popularityTracker.Increment(result.IdCandidato);
 
-            result.FotoUrl = $"{fotoSettings.ApiBasePath}/foto_cand{lastEleicao.Ano}_{lastEleicao.SiglaUF}_div/F{lastEleicao.SiglaUF}{lastEleicao.SqCandidato}_div.jpg";
-            result.Eleicoes = eleicoes.OrderByDescending(e => e.Ano).ToList();
-            result.CandidatoExt = candidatoExt.OrderByDescending(ce => ce.Ano).ToList();
+            var eleicoes = detail.Eleicoes.OrderByDescending(e => e.Ano).ToList();
+            var lastEleicao = eleicoes[0];
 
-            logger.LogDebug($"Found Candidato: {result.Nome}, ID: {result.IdCandidato}, CPF: {result.Cpf}, FotoUrl: {result.FotoUrl}");
+            result.FotoUrl = fotoLocator.GetFotoUrl(lastEleicao.Ano, lastEleicao.SiglaUF, lastEleicao.SqCandidato)!;
+            result.Eleicoes = eleicoes;
+            result.CandidatoExt = detail.CandidatoExt.OrderByDescending(ce => ce.Ano).ToList();
+
+            logger.LogDebug("Found Candidato {IdCandidato} ({Nome})", result.IdCandidato, result.Nome);
 
             return result;
         }
@@ -168,48 +157,54 @@ namespace OpenCand.API.Services
                 return new CpfRevealResult();
             }
 
-            logger.LogDebug($"Found CPF {result} for Candidato ID {idcandidato}");
-
             return new CpfRevealResult()
             {
                 Cpf = result
             };
         }
 
-        public async Task<DespesasResult> GetDespesasByIdAndYear(Guid idcandidato)
+        public async Task<DespesasResult> GetDespesasByIdAndYear(Guid idcandidato, int? ano = null, int? page = null, int? pageSize = null)
         {
-            logger.LogInformation($"Getting despesas for Candidato ID {idcandidato}");
+            var paging = Paging.Resolve(page, pageSize);
+            logger.LogInformation("Getting despesas for Candidato ID {IdCandidato} (ano={Ano}, page={Page}, pageSize={PageSize})", idcandidato, ano, page, pageSize);
 
-            var result = await despesaReceitaRepository.GetDespesasByCandidatoIdYearAsync(idcandidato);
-            if (result == null)
-            {
-                return new DespesasResult();
-            }
-
-            logger.LogDebug($"Found {result.Count} despesas for Candidato ID {idcandidato}");
+            var (items, total) = await despesaReceitaRepository.GetDespesasAsync(idcandidato, ano, paging);
+            items.ForEach(d => d.CpfFornecedor = CpfMasking.MaskCpf(d.CpfFornecedor));
 
             return new DespesasResult()
             {
-                Despesas = result.OrderByDescending(d => d.Ano).ThenByDescending(d => d.Valor).ToList()
+                Despesas = items,
+                Page = paging.Page,
+                PageSize = paging.Enabled ? paging.PageSize : items.Count,
+                Total = total
             };
         }
 
-        public async Task<ReceitaResult> GetReceitasByIdAndYear(Guid idcandidato)
+        public async Task<ReceitaResult> GetReceitasByIdAndYear(Guid idcandidato, int? ano = null, int? page = null, int? pageSize = null)
         {
-            logger.LogInformation($"Getting receitas for Candidato ID {idcandidato}");
+            var paging = Paging.Resolve(page, pageSize);
+            logger.LogInformation("Getting receitas for Candidato ID {IdCandidato} (ano={Ano}, page={Page}, pageSize={PageSize})", idcandidato, ano, page, pageSize);
 
-            var result = await despesaReceitaRepository.GetReceitasByCandidatoIdYearAsync(idcandidato);
-            if (result == null)
-            {
-                return new ReceitaResult();
-            }
-
-            logger.LogDebug($"Found {result.Count} receitas for Candidato ID {idcandidato}");
+            var (items, total) = await despesaReceitaRepository.GetReceitasAsync(idcandidato, ano, paging);
+            items.ForEach(r => r.CpfDoador = CpfMasking.MaskCpf(r.CpfDoador));
 
             return new ReceitaResult()
             {
-                Receitas = result.OrderByDescending(d => d.Ano).ThenByDescending(d => d.Valor).ToList()
+                Receitas = items,
+                Page = paging.Page,
+                PageSize = paging.Enabled ? paging.PageSize : items.Count,
+                Total = total
             };
+        }
+
+        public async Task<FinanceResumoResult> GetDespesasResumo(Guid idcandidato)
+        {
+            return new FinanceResumoResult { Resumo = await despesaReceitaRepository.GetDespesasResumoAsync(idcandidato) };
+        }
+
+        public async Task<FinanceResumoResult> GetReceitasResumo(Guid idcandidato)
+        {
+            return new FinanceResumoResult { Resumo = await despesaReceitaRepository.GetReceitasResumoAsync(idcandidato) };
         }
     }
 }

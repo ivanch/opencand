@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.Extensions.Logging;
 using OpenCand.API.Model;
 
@@ -15,22 +15,38 @@ namespace OpenCand.API.Services
             this.logger = logger;
         }
 
+        private readonly SemaphoreSlim preloadLock = new(1, 1);
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             // Wait a bit for the application to fully start up
             await Task.Delay(5000, stoppingToken);
-            logger.LogInformation("Starting cache preload process...");
+            await PreloadAsync(stoppingToken);
+        }
 
-            using var scope = serviceProvider.CreateScope();
-            var estatisticaService = scope.ServiceProvider.GetRequiredService<EstatisticaService>();
-            var openCandService = scope.ServiceProvider.GetRequiredService<OpenCandService>();
+        /// <summary>Warms the cache. Also called by <see cref="DataVersionWatcher"/> after an ETL run.</summary>
+        public async Task PreloadAsync(CancellationToken cancellationToken = default)
+        {
+            await preloadLock.WaitAsync(cancellationToken);
+            try
+            {
+                logger.LogInformation("Starting cache preload process...");
 
-            // First, preload single-call endpoints
-            await PreloadSingleEndpoints(estatisticaService, openCandService);
+                using var scope = serviceProvider.CreateScope();
+                var estatisticaService = scope.ServiceProvider.GetRequiredService<EstatisticaService>();
+                var openCandService = scope.ServiceProvider.GetRequiredService<OpenCandService>();
 
-            await PerformPreLoadEstatistica(estatisticaService);
+                // First, preload single-call endpoints
+                await PreloadSingleEndpoints(estatisticaService, openCandService);
 
-            logger.LogInformation("Cache preload process completed.");
+                await PerformPreLoadEstatistica(estatisticaService);
+
+                logger.LogInformation("Cache preload process completed.");
+            }
+            finally
+            {
+                preloadLock.Release();
+            }
         }
 
         private async Task PerformPreLoadEstatistica(EstatisticaService estatisticaService)

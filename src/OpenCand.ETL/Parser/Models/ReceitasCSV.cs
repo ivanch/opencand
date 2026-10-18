@@ -86,7 +86,7 @@ namespace OpenCand.Parser.Models
         public string DescricaoReceita { get; set; }
 
         [Name("VR_RECEITA")]
-        public float ValorReceita { get; set; }
+        public string? ValorReceita { get; set; }
 
         [Name("DS_GENERO")]
         public string Genero { get; set; }
