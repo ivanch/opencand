@@ -112,6 +112,10 @@ public class TseParsingTests
     [InlineData("00000000000", null)]       // would merge unrelated people under the unique CPF index
     [InlineData("11111111111", null)]
     [InlineData("***.456.789-**", null)]
+    [InlineData("1007846585", "01007846585")]  // leading zero dropped by a numeric column
+    [InlineData("5141796", "00005141796")]
+    [InlineData("1007846586", null)]           // padding only when the check digits are valid
+    [InlineData("1234", null)]
     public void ParseCpf(string? raw, string? expected)
     {
         Assert.Equal(expected, TseParsing.ParseCpf(raw));

@@ -96,14 +96,31 @@ namespace OpenCand.ETL.Parsing
 
         /// <summary>
         /// Returns the 11 digits of a CPF, or null when the value is not a usable CPF (wrong length, masked, or all
-        /// digits equal such as 00000000000, which would merge unrelated people).
+        /// digits equal such as 00000000000, which would merge unrelated people). Some files write the CPF as a number
+        /// and drop its leading zeros: a shorter value is zero-padded when that gives valid check digits.
         /// </summary>
         public static string? ParseCpf(string? raw)
         {
             var digits = OnlyDigits(NullIfTseEmpty(raw));
-            if (digits is null || digits.Length != 11) return null;
+            if (digits is null || digits.Length > 11) return null;
+            if (digits.Length < 11)
+            {
+                digits = digits.PadLeft(11, '0');
+                if (!HasValidCpfCheckDigits(digits)) return null;
+            }
             if (digits.All(c => c == digits[0])) return null;
             return digits;
+        }
+
+        internal static bool HasValidCpfCheckDigits(string cpf)
+        {
+            for (var n = 9; n <= 10; n++)
+            {
+                var sum = 0;
+                for (var i = 0; i < n; i++) sum += (cpf[i] - '0') * (n + 1 - i);
+                if (sum * 10 % 11 % 10 != cpf[n] - '0') return false;
+            }
+            return true;
         }
 
         /// <summary>Splits a CPF/CNPJ document: 11 digits are a CPF, 14 digits a CNPJ, anything else neither.</summary>

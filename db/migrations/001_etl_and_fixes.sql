@@ -46,6 +46,22 @@ UPDATE candidato_mapping SET cpf   = NULL WHERE cpf   IS NOT NULL AND btrim(cpf)
 UPDATE candidato_ext     SET email = NULL WHERE email IS NOT NULL AND btrim(email) = '';
 
 ---------------------------------------------------------------------------------------------------
+-- 2b. CPFs that lost their leading zeros (some TSE files write NR_CPF_CANDIDATO as a number).
+--     Padded back to 11 digits only when the result has valid check digits, so they merge in step 5.
+---------------------------------------------------------------------------------------------------
+CREATE FUNCTION pg_temp.cpf_valido(c TEXT) RETURNS BOOLEAN LANGUAGE sql IMMUTABLE AS $f$
+    SELECT CASE WHEN c !~ '^[0-9]{11}$' OR c ~ '^(.)\1{10}$' THEN false ELSE
+        (SELECT sum(substr(c, i, 1)::int * (11 - i)) * 10 % 11 % 10 FROM generate_series(1, 9) i)  = substr(c, 10, 1)::int
+        AND (SELECT sum(substr(c, i, 1)::int * (12 - i)) * 10 % 11 % 10 FROM generate_series(1, 10) i) = substr(c, 11, 1)::int
+    END
+$f$;
+
+UPDATE candidato         SET cpf = lpad(cpf, 11, '0') WHERE cpf ~ '^[0-9]{1,10}$' AND pg_temp.cpf_valido(lpad(cpf, 11, '0'));
+UPDATE candidato_mapping SET cpf = lpad(cpf, 11, '0') WHERE cpf ~ '^[0-9]{1,10}$' AND pg_temp.cpf_valido(lpad(cpf, 11, '0'));
+
+DROP FUNCTION pg_temp.cpf_valido(TEXT);
+
+---------------------------------------------------------------------------------------------------
 -- 3. Alias table (old candidate id -> canonical id), so previously published links keep working
 ---------------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS candidato_alias (
