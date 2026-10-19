@@ -149,7 +149,6 @@ namespace OpenCand.ETL.Pipeline
             if (stats.Written == 0)
                 throw new EtlException($"{loader.Dataset}: no row could be loaded; refusing to replace the current table with an empty one.");
 
-            logger.LogInformation("{Dataset}: building indexes on {Table}", loader.Dataset, loader.Table.NewTable);
             await loader.Table.BuildIndexesAsync(dataSource, ct);
             swaps.Add(loader.Table);
         }

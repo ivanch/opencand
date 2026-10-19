@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,8 +14,6 @@ namespace OpenCand.ETL.Loading
     /// </summary>
     public abstract class StreamingFactLoader<TCsv, TRow>
     {
-        private const int ProgressEvery = 500_000;
-
         private readonly NpgsqlDataSource dataSource;
         private readonly SqIndex sqIndex;
         private readonly EtlSettings settings;
@@ -74,10 +71,8 @@ namespace OpenCand.ETL.Loading
 
         private void LoadFile(string file, LoadStats stats, CancellationToken ct)
         {
-            var timer = Stopwatch.StartNew();
             var encoding = Encoding.GetEncoding(settings.CsvEncoding);
             long rows = 0;
-            logger.LogInformation("{Dataset}: loading {File}", Dataset, file);
 
             using var connection = dataSource.OpenConnection();
             using var writer = connection.BeginBinaryImport(CopyCommand);
@@ -85,8 +80,6 @@ namespace OpenCand.ETL.Loading
             foreach (var csv in CsvSource.Read<TCsv>(file, encoding, stats, logger))
             {
                 if (++rows % 10_000 == 0) ct.ThrowIfCancellationRequested();
-                if (rows % ProgressEvery == 0)
-                    logger.LogInformation("{Dataset}: {File} {Rows:N0} rows so far", Dataset, Path.GetFileName(file), rows);
 
                 var sq = Sq(csv);
                 if (sq is null || !sqIndex.TryGet(Ano(csv), sq, out var idCandidato))
@@ -108,10 +101,6 @@ namespace OpenCand.ETL.Loading
             }
 
             writer.Complete();
-
-            var seconds = Math.Max(timer.Elapsed.TotalSeconds, 0.001);
-            logger.LogInformation("{Dataset}: {File} done, {Rows:N0} rows in {Seconds:F1}s ({Rate:N0} rows/s)",
-                Dataset, Path.GetFileName(file), rows, seconds, rows / seconds);
         }
     }
 }

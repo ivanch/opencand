@@ -31,7 +31,7 @@ namespace OpenCand.ETL.Loading
         public void AddRead() => Interlocked.Increment(ref read);
         public void AddWritten() => Interlocked.Increment(ref written);
         public void Reject(string reason) => rejected.AddOrUpdate(reason, 1, (_, count) => count + 1);
-        public void Warn(string reason) => warnings.AddOrUpdate(reason, 1, (_, count) => count + 1);
+        public void Warn(string reason, long amount = 1) => warnings.AddOrUpdate(reason, amount, (_, count) => count + amount);
 
         public double RejectRatio => Read == 0 ? 0 : (double)RejectedTotal / Read;
 

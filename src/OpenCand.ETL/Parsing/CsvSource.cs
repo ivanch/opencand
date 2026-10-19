@@ -20,10 +20,7 @@ namespace OpenCand.ETL.Parsing
             foreach (var path in Directory.GetFiles(directory, "*.csv"))
             {
                 if (Path.GetFileName(path).StartsWith("fix_", StringComparison.OrdinalIgnoreCase))
-                {
-                    logger.LogInformation("Skipping legacy repaired file {File}", path);
                     continue;
-                }
 
                 files.Add(path);
             }
@@ -75,10 +72,7 @@ namespace OpenCand.ETL.Parsing
                 yield return record;
             }
 
-            if (repairing.RepairedLines > 0)
-            {
-                logger.LogInformation("{File}: {Count} broken records were repaired", Path.GetFileName(path), repairing.RepairedLines);
-            }
+            if (repairing.RepairedLines > 0) stats.Warn("repaired_lines", repairing.RepairedLines);
         }
 
         [GeneratedRegex(@"(?<!\d)(19|20)\d{2}(?!\d)")]

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -47,9 +46,6 @@ namespace OpenCand.ETL.Loading
             foreach (var file in files)
             {
                 ct.ThrowIfCancellationRequested();
-                var timer = Stopwatch.StartNew();
-                var readBefore = stats.Read;
-                logger.LogInformation("Redes sociais: loading {File}", file);
 
                 // (idcandidato, ano, link) is the primary key
                 var pending = new Dictionary<(Guid, int, string), RedeRow>();
@@ -81,9 +77,6 @@ namespace OpenCand.ETL.Loading
                 }
 
                 await FlushAsync(pending.Values, ct);
-                var rows = stats.Read - readBefore;
-                var seconds = Math.Max(timer.Elapsed.TotalSeconds, 0.001);
-                logger.LogInformation("Redes sociais: {File} done, {Rows} rows in {Seconds:F1}s ({Rate:N0} rows/s)", Path.GetFileName(file), rows, seconds, rows / seconds);
             }
 
             return stats;

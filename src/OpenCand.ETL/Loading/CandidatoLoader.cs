@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -46,15 +45,11 @@ namespace OpenCand.ETL.Loading
 
             var resolver = new CandidateResolver();
             await PreloadAsync(resolver, ct);
-            logger.LogInformation("Candidatos: preloaded {Count} existing candidatos", resolver.CandidatoCount);
 
             var encoding = Encoding.GetEncoding(settings.CsvEncoding);
             foreach (var file in files)
             {
                 ct.ThrowIfCancellationRequested();
-                var timer = Stopwatch.StartNew();
-                var readBefore = stats.Read;
-                logger.LogInformation("Candidatos: loading {File}", file);
 
                 foreach (var row in CsvSource.Read<CandidatoCSV>(file, encoding, stats, logger))
                 {
@@ -72,7 +67,6 @@ namespace OpenCand.ETL.Loading
                 }
 
                 await FlushAsync(resolver.TakeBatch(), ct);
-                LogFile("Candidatos", file, stats.Read - readBefore, timer);
             }
 
             return stats;
@@ -281,13 +275,6 @@ namespace OpenCand.ETL.Loading
                       (EXCLUDED.apelido, EXCLUDED.email, EXCLUDED.estadocivil, EXCLUDED.escolaridade, EXCLUDED.ocupacao);", ct);
 
             await tx.CommitAsync(ct);
-        }
-
-        private void LogFile(string dataset, string file, long rows, Stopwatch timer)
-        {
-            var seconds = Math.Max(timer.Elapsed.TotalSeconds, 0.001);
-            logger.LogInformation("{Dataset}: {File} done, {Rows} rows in {Seconds:F1}s ({Rate:N0} rows/s)",
-                dataset, Path.GetFileName(file), rows, seconds, rows / seconds);
         }
     }
 }

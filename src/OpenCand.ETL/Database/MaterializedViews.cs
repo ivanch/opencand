@@ -41,23 +41,20 @@ namespace OpenCand.ETL.Database
                 foreach (var view in ViewNames)
                     await connection.ExecuteAsync($"DROP MATERIALIZED VIEW IF EXISTS {view}", ct, timeoutSeconds: 0);
 
+                logger.LogInformation("Swapping in {Count} table(s) and recreating materialized views", swaps.Count);
                 foreach (var swap in swaps)
-                {
-                    logger.LogInformation("Swapping in {Table}", swap.Table);
                     foreach (var sql in swap.CutoverStatements())
                         await connection.ExecuteAsync(sql, ct, timeoutSeconds: 0);
-                }
 
-                logger.LogInformation("Creating materialized views");
                 await connection.ExecuteAsync(LoadSql(), ct, timeoutSeconds: 0);
 
                 await tx.CommitAsync(ct);
                 return;
             }
 
+            logger.LogInformation("Refreshing materialized views");
             foreach (var view in ViewNames)
             {
-                logger.LogInformation("Refreshing {View}", view);
                 await using var connection = await dataSource.OpenConnectionAsync(ct);
                 await connection.ExecuteAsync($"REFRESH MATERIALIZED VIEW CONCURRENTLY {view}", ct, timeoutSeconds: 0);
                 await connection.ExecuteAsync($"ANALYZE {view}", ct, timeoutSeconds: 0);
