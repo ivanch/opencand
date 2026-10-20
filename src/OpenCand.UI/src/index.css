@@ -1,7 +1,9 @@
 @import "tailwindcss";
 
-/* Project palette (Tailwind v4 CSS-first config; replaces the former tailwind.config.js) */
+/* Project palette and design tokens (Tailwind v4 CSS-first config; replaces the former tailwind.config.js) */
 @theme {
+  --font-sans: "Inter", "InterVariable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
   --color-indigo-50: #eef2ff;
   --color-indigo-100: #e0e7ff;
   --color-indigo-200: #c7d2fe;
@@ -13,16 +15,25 @@
   --color-indigo-800: #3730a3;
   --color-indigo-900: #312e81;
   --color-indigo-950: #1e1b4b;
+
+  /* Dark surfaces the app is built on (page background → raised glass) */
+  --color-surface-950: #070a13;
+  --color-surface-900: #0b1020;
+  --color-surface-800: #121831;
+  --color-surface-700: #1c2442;
+
+  --shadow-panel: 0 1px 2px rgb(15 23 42 / 0.06), 0 12px 32px -12px rgb(15 23 42 / 0.35);
+  --shadow-glow: 0 0 0 1px rgb(129 140 248 / 0.25), 0 18px 40px -16px rgb(99 102 241 / 0.55);
 }
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color-scheme: dark;
+  color: #f1f5f9;
+  background-color: var(--color-surface-950);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -37,5 +48,22 @@ body {
   min-height: 100vh;
   width: 100%;
 
-  @apply bg-gray-900 text-white;
+  @apply bg-surface-950 text-slate-100;
+}
+
+/* In the base layer so component utilities (e.g. focus-visible:outline-none) can override them */
+@layer base {
+  /* Sections reached through a hash link land below the sticky navbar */
+  section[id] {
+    scroll-margin-top: 5rem;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-indigo-400);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: rgb(99 102 241 / 0.35);
+  }
 }

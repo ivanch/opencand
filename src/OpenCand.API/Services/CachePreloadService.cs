@@ -76,6 +76,41 @@ namespace OpenCand.API.Services
             }
 
             await PerformPreLoad("GetMaioresEnriquecimentos", () => estatisticaService.GetMaioresEnriquecimentos(null));
+
+            // The year is the most common first filter on the statistics page, so warm every year as well.
+            List<int> anos;
+            try
+            {
+                anos = (await estatisticaService.GetConfigurationModel()).Anos ?? new List<int>();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to read the available years for the cache preload");
+                return;
+            }
+
+            logger.LogInformation($"Preloading cache with GetValueSum and GetMaioresEnriquecimentos requests for {anos.Count} years");
+
+            foreach (var ano in anos)
+            {
+                foreach (var type in types)
+                {
+                    foreach (var groupBy in groupByValues)
+                    {
+                        var request = new GetValueSumRequest
+                        {
+                            Type = type,
+                            GroupBy = groupBy,
+                            Filter = new GetValueSumRequest.GetValueSumRequestFilter { Ano = ano }
+                        };
+
+                        await PerformPreLoad("GetValueSum", () => estatisticaService.GetValueSum(request));
+                    }
+                }
+
+                await PerformPreLoad("GetMaioresEnriquecimentos",
+                    () => estatisticaService.GetMaioresEnriquecimentos(new GetValueSumRequest.GetValueSumRequestFilter { Ano = ano }));
+            }
         }
 
         private async Task PreloadSingleEndpoints(EstatisticaService estatisticaService, OpenCandService openCandService)

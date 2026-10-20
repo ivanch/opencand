@@ -28,7 +28,7 @@ namespace OpenCand.API.Services
         {
             logger.LogInformation($"Getting maiores enriquecimentos. Filters: Partido={requestFilter?.Partido}, Uf={requestFilter?.Uf}, Ano={requestFilter?.Ano}, Cargo={requestFilter?.Cargo}");
 
-            return await estatisticaRepository.GetMaioresEnriquecimentos(requestFilter);
+            return await estatisticaRepository.GetMaioresEnriquecimentos(BuildEnriquecimentoCacheKey(requestFilter), requestFilter);
         }
 
         public async Task<List<GetValueSumResponse>> GetValueSum(GetValueSumRequest request)
@@ -54,9 +54,18 @@ namespace OpenCand.API.Services
         // Every filter value must be part of the key: the SQL text alone is identical for different filter values.
         internal static string BuildValueSumCacheKey(GetValueSumRequest request)
         {
-            var f = request.Filter;
-            return string.Join("|", "ValueSum", request.Type.ToLowerInvariant(), request.GroupBy.ToLowerInvariant(),
-                f?.Partido?.Trim() ?? "", f?.Uf?.Trim().ToUpperInvariant() ?? "", f?.Ano?.ToString() ?? "", f?.Cargo?.Trim() ?? "");
+            return string.Join("|", "ValueSum", request.Type.ToLowerInvariant(), request.GroupBy.ToLowerInvariant(), BuildFilterCacheKey(request.Filter));
+        }
+
+        internal static string BuildEnriquecimentoCacheKey(GetValueSumRequestFilter? filter)
+        {
+            return string.Join("|", "MaioresEnriquecimento", BuildFilterCacheKey(filter));
+        }
+
+        // Normalized the same way the filters are bound as parameters (trimmed, UF upper-cased).
+        private static string BuildFilterCacheKey(GetValueSumRequestFilter? f)
+        {
+            return string.Join("|", f?.Partido?.Trim() ?? "", f?.Uf?.Trim().ToUpperInvariant() ?? "", f?.Ano?.ToString() ?? "", f?.Cargo?.Trim() ?? "");
         }
 
         private void ValidateRequest(GetValueSumRequest request)
@@ -85,49 +94,55 @@ namespace OpenCand.API.Services
 
             public string BuildQuery(GetValueSumRequest request)
             {
-                var selectClause = BuildSelectClause(request.GroupBy);
-                var fromClause = BuildFromClause(request.Type);
-                var joinClause = BuildJoinClause(request.GroupBy);
-                var whereClause = BuildWhereClause(request.Filter);
-                var groupByClause = BuildGroupByClause(request.GroupBy);
-                var orderByClause = "ORDER BY SUM(src.valor) DESC";
-                var limitClause = "LIMIT 10";
-
-                return string.Join(" ", new[] { selectClause, fromClause, joinClause, whereClause, groupByClause, orderByClause, limitClause }
-                    .Where(part => part.Length > 0));
-            }
-
-            private string BuildSelectClause(string groupBy)
-            {
-                return groupBy.ToLower() switch
+                var groupBy = request.GroupBy.ToLower();
+                var column = groupBy switch
                 {
-                    "candidato" => "SELECT src.idcandidato, c.nome, src.ano, SUM(src.valor) as valor",
-                    "partido" => "SELECT src.sgpartido, src.ano, SUM(src.valor) as valor",
-                    "uf" => "SELECT src.siglauf, src.ano, SUM(src.valor) as valor",
-                    "cargo" => "SELECT src.cargo, src.ano, SUM(src.valor) as valor",
+                    "candidato" => "src.idcandidato",
+                    "partido" => "src.sgpartido",
+                    "uf" => "src.siglauf",
+                    "cargo" => "src.cargo",
                     _ => throw new ArgumentException("Invalid group by specified.")
                 };
+                // The candidato grouping needs the per-candidate view; the others only need the much smaller rollup.
+                var view = groupBy == "candidato" ? BuildCandidatoView(request.Type) : BuildResumoView(request.Type);
+                var whereClause = BuildWhereClause(request.Filter);
+
+                var query = string.Join(" ", new[]
+                {
+                    $"SELECT {column}, src.ano, SUM(src.valor) AS valor",
+                    $"FROM {view} src",
+                    whereClause,
+                    $"GROUP BY {column}, src.ano",
+                    "ORDER BY SUM(src.valor) DESC",
+                    "LIMIT 10"
+                }.Where(part => part.Length > 0));
+
+                // Pick the top 10 first, then join candidato only for their names.
+                return groupBy == "candidato"
+                    ? $"SELECT t.idcandidato, c.nome, t.ano, t.valor FROM ({query}) t JOIN candidato c ON c.idcandidato = t.idcandidato ORDER BY t.valor DESC"
+                    : query;
             }
 
-            private string BuildFromClause(string type)
+            private static string BuildCandidatoView(string type)
             {
                 return type.ToLower() switch
                 {
-                    "bem" => "FROM mv_bem_candidato src",
-                    "despesa" => "FROM mv_despesas_candidato src",
-                    "receita" => "FROM mv_receitas_candidato src",
+                    "bem" => "mv_bem_candidato",
+                    "despesa" => "mv_despesas_candidato",
+                    "receita" => "mv_receitas_candidato",
                     _ => throw new ArgumentException("Invalid type specified.")
                 };
             }
 
-            // The MVs already carry siglauf / sgpartido / cargo, so only grouping by candidato needs a join (for the name).
-            private string BuildJoinClause(string groupBy)
+            // (ano, siglauf, sgpartido, cargo) rollups of the per-candidate views
+            private static string BuildResumoView(string type)
             {
-                return groupBy.ToLower() switch
+                return type.ToLower() switch
                 {
-                    "candidato" => "JOIN candidato c ON c.idcandidato = src.idcandidato",
-                    "partido" or "uf" or "cargo" => "",
-                    _ => throw new ArgumentException("Invalid group by specified.")
+                    "bem" => "mv_bem_resumo",
+                    "despesa" => "mv_despesas_resumo",
+                    "receita" => "mv_receitas_resumo",
+                    _ => throw new ArgumentException("Invalid type specified.")
                 };
             }
 
@@ -167,18 +182,6 @@ namespace OpenCand.API.Services
                 }
 
                 return conditions.Count > 0 ? $"WHERE {string.Join(" AND ", conditions)}" : "";
-            }
-
-            private string BuildGroupByClause(string groupBy)
-            {
-                return groupBy.ToLower() switch
-                {
-                    "candidato" => "GROUP BY src.idcandidato, c.nome, src.ano",
-                    "partido" => "GROUP BY src.sgpartido, src.ano",
-                    "uf" => "GROUP BY src.siglauf, src.ano",
-                    "cargo" => "GROUP BY src.cargo, src.ano",
-                    _ => throw new ArgumentException("Invalid group by specified.")
-                };
             }
         }
 

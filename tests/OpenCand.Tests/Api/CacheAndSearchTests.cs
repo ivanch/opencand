@@ -61,6 +61,42 @@ public class CacheAndSearchTests
 
         public Task<string?> Get(string key, Func<string> factory, TimeSpan? ttl = null)
             => GetOrSetCacheAsync<string>(key, () => Task.FromResult<string?>(factory()), ttl);
+
+        public Task<string?> GetAsync(string key, Func<Task<string?>> factory)
+            => GetOrSetCacheAsync(key, factory);
+    }
+
+    [Fact]
+    public async Task Cache_ConcurrentMissesForTheSameKeyRunTheFactoryOnce()
+    {
+        using var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 10 });
+        var repo = new ProbeRepository(cache);
+        var release = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+        var key = $"coalesce-{Guid.NewGuid()}";
+
+        var callers = Enumerable.Range(0, 10)
+            .Select(_ => repo.GetAsync(key, () => { Interlocked.Increment(ref calls); return release.Task; }))
+            .ToList();
+        release.SetResult("v");
+        var results = await Task.WhenAll(callers);
+
+        Assert.All(results, r => Assert.Equal("v", r));
+        Assert.Equal(1, calls);
+        Assert.True(cache.TryGetValue(key, out _));
+    }
+
+    [Fact]
+    public async Task Cache_FailedLoadIsNotCachedAndIsRetried()
+    {
+        using var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 10 });
+        var repo = new ProbeRepository(cache);
+        var key = $"retry-{Guid.NewGuid()}";
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => repo.GetAsync(key, () => throw new InvalidOperationException()));
+        var second = await repo.GetAsync(key, () => Task.FromResult<string?>("v"));
+
+        Assert.Equal("v", second);
     }
 
     [Fact]

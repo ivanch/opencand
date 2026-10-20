@@ -10,6 +10,8 @@ import IncomeExpenseComponent from './IncomeExpenseComponent';
 import Button from '../../shared/Button';
 import RandomCandButton from '../../shared/RandomCandButton';
 import ErrorPage from '../ErrorPage';
+import CandidateHeader from './CandidateHeader';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 const CandidatePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +23,8 @@ const CandidatePage: React.FC = () => {
   const [isLoadingAssets, setIsLoadingAssets] = useState(true);
   const [isLoadingRedesSociais, setIsLoadingRedesSociais] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  usePageTitle(candidateDetails?.nome ?? 'Candidato');
 
   useEffect(() => {
     if (!id) {
@@ -98,61 +102,46 @@ const CandidatePage: React.FC = () => {
   }
 
   return (
-    <main className="flex-grow p-6 max-w-7xl mx-auto">
-      {/* Header with back button */}
-      <div className="mb-6">
-        <div className="flex items-center gap-4 mb-4">
-          <Button
-            onClick={() => navigate('/')}
-            className="flex items-center text-white"
-            hasAnimation={false}
-          >
-            <ArrowLeftIcon className="h-5 w-5 mr-2" />
-            Voltar à busca
-          </Button>
-          
-          <RandomCandButton 
-            className="flex items-center text-white"
-            hasAnimation={false}
-          />
-        </div>
-        
-        {candidateDetails && (
-          <h1 className="text-3xl font-bold text-white">{candidateDetails.nome}</h1>
-        )}
+    <main className="mx-auto w-full max-w-7xl flex-grow px-4 pb-8 pt-6 sm:px-6">
+      {/* Actions */}
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <Button to="/" size="sm">
+          <ArrowLeftIcon className="h-4 w-4" aria-hidden="true" />
+          Voltar à busca
+        </Button>
+        <RandomCandButton size="sm" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+      <div className="mb-6">
+        <CandidateHeader key={id} candidateDetails={candidateDetails} isLoading={isLoadingDetails} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left Column - Basic Information and Social Media */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Basic Information Panel */}
-          <BasicCandidateInfoComponent 
+        <div className="space-y-6 lg:col-span-1">
+          <BasicCandidateInfoComponent
             candidateDetails={candidateDetails}
             isLoading={isLoadingDetails}
           />
 
-          {/* Social Media Panel */}
-          <SocialMediaComponent 
+          <SocialMediaComponent
             redesSociais={candidateRedesSociais?.redesSociais || null}
             isLoading={isLoadingRedesSociais}
           />
         </div>
 
-        {/* Right Column - Elections and Assets */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Elections Panel */}
-          <ElectionsComponent 
+        {/* Right Column - Elections, Assets and Income/Expenses */}
+        <div className="min-w-0 space-y-6 lg:col-span-2">
+          <ElectionsComponent
             elections={candidateDetails?.eleicoes || null}
             isLoading={isLoadingDetails}
           />
 
-          {/* Assets Panel */}
-          <AssetsComponent 
+          <AssetsComponent
             assets={candidateAssets?.bens || null}
             isLoading={isLoadingAssets}
           />
-          
-          {/* Income and Expenses Panel */}
+
           {id && <IncomeExpenseComponent key={id} idCandidato={id} />}
         </div>
       </div>

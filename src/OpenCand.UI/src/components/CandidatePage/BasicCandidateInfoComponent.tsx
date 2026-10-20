@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { UserIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, UserIcon } from '@heroicons/react/24/outline';
 import { type CandidateDetails, openCandApi } from '../../api';
 import { formatCpf, formatDateToDDMMYYYY, maskCpf } from '../../utils/utils';
+import Panel from '../../shared/Panel';
+import Spinner, { LoadingBlock } from '../../shared/Spinner';
 
 interface BasicCandidateInfoComponentProps {
   candidateDetails: CandidateDetails | null;
@@ -97,111 +99,84 @@ const BasicCandidateInfoComponent: React.FC<BasicCandidateInfoComponentProps> = 
 
     return (
       <div>
-        <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{title}</label>
-        <div className="mt-1 space-y-1">
-          {Array.from(dataMap.entries()).map(([value, years], index) => (
-            <div key={index} className="text-center">
-              <p className="text-lg text-gray-900">
-                {value} <span className="text-xs text-gray-500 ml-2">{years.join(', ')}</span>
-              </p>
+        <dt className="text-xs font-medium uppercase tracking-wider text-slate-500">{title}</dt>
+        <dd className="mt-1.5 space-y-1.5">
+          {Array.from(dataMap.entries()).map(([value, years]) => (
+            <div key={value} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="break-words text-slate-900">{value}</span>
+              <span className="flex flex-wrap gap-1">
+                {years.map(year => (
+                  <span key={year} className="rounded-md bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-500 tabular-nums">
+                    {year}
+                  </span>
+                ))}
+              </span>
             </div>
           ))}
-        </div>
+        </dd>
       </div>
     );
   };
 
+  const renderField = (label: string, value: React.ReactNode) => (
+    <div>
+      <dt className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</dt>
+      <dd className="mt-1 text-slate-900">{value || <span className="text-slate-400">Não informado</span>}</dd>
+    </div>
+  );
+
+  const historicalData = getHistoricalData();
+
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] transition-all duration-200 p-6">
-      <div className="flex items-center mb-6">
-        <UserIcon className="h-8 w-8 text-blue-600 mr-3" />
-        <h2 className="text-2xl font-bold text-gray-900">Informações Básicas</h2>
-      </div>
-
+    <Panel title="Informações Básicas" icon={UserIcon} iconClassName="bg-blue-50 text-blue-600">
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
-        </div>
+        <LoadingBlock heightClassName="h-48" colorClassName="border-blue-600" />
       ) : candidateDetails ? (
-        <div className="space-y-4">
-          {/* Candidate Photo */}
-          {candidateDetails.fotoUrl && (
-            <div className="flex justify-center mb-6">
-              <div className="relative">
-                <img
-                  src={candidateDetails.fotoUrl}
-                  alt={`Foto de ${candidateDetails.nome}`}
-                  className="w-36 h-36 rounded-full object-cover border-4 border-blue-200 shadow-lg"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-              </div>
-            </div>
-          )}
+        <dl className="space-y-4">
+          {renderField('Nome', <span className="font-medium">{candidateDetails.nome}</span>)}
 
-          <div>
-            <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Nome</label>
-            <p className="text-lg font-medium text-gray-900 mt-1">{candidateDetails.nome}</p>
-          </div>
-          
-          {candidateDetails.cpf && 
-            <div>
-              <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">CPF</label>
-              <div 
-                className={`text-lg text-gray-900 mt-1 ${
-                  !revealedCpf && !isRevealingCpf ? 'cursor-pointer hover:text-blue-600 transition-colors duration-200' : ''
-                }`}
+          {candidateDetails.cpf && renderField('CPF', (
+            revealedCpf ? (
+              <span className="tabular-nums">{revealedCpf}</span>
+            ) : (
+              <button
+                type="button"
                 onClick={handleCpfClick}
+                disabled={isRevealingCpf}
+                className="group inline-flex items-center gap-2 rounded-lg text-left tabular-nums transition-colors hover:text-blue-600 disabled:cursor-wait"
+                title="Mostrar CPF completo"
               >
+                <span className="select-none">{maskCpf(candidateDetails.cpf)}</span>
                 {isRevealingCpf ? (
-                  <div className="flex items-center justify-center space-x-2 py-1">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-200 border-t-blue-600"></div>
-                    <span className="animate-pulse text-blue-600">Carregando...</span>
-                  </div>
+                  <Spinner size="sm" colorClassName="border-blue-600" />
                 ) : (
-                  <span className={revealedCpf ? '' : 'select-none'}>
-                    {revealedCpf || maskCpf(candidateDetails.cpf)}
+                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 group-hover:bg-blue-100">
+                    <EyeIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                    Mostrar
                   </span>
                 )}
-              </div>
+              </button>
+            )
+          ))}
+
+          <div className="grid grid-cols-2 gap-4">
+            {renderField('Data de Nascimento', <span className="tabular-nums">{formatDate(candidateDetails.dataNascimento)}</span>)}
+            {renderField('Sexo', candidateDetails.sexo)}
+          </div>
+
+          {historicalData && (
+            <div className="space-y-4 border-t border-slate-100 pt-4">
+              {renderHistoricalField('Email', historicalData.emails)}
+              {renderHistoricalField('Estado Civil', historicalData.estadosCivis)}
+              {renderHistoricalField('Escolaridade', historicalData.escolaridades)}
+              {renderHistoricalField('Ocupação', historicalData.ocupacoes)}
             </div>
-          }
-
-          <div>
-            <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Data de Nascimento</label>
-            <p className="text-lg text-gray-900 mt-1">{formatDate(candidateDetails.dataNascimento)}</p>
-          </div>
-
-          <div>
-            <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Sexo</label>
-            <p className="text-lg text-gray-900 mt-1">{candidateDetails.sexo}</p>
-          </div>
-
-          {/* Historical Data Section */}
-          {(() => {
-            const historicalData = getHistoricalData();
-            if (!historicalData) return null;
-
-            return (
-              <div className="border-t border-gray-200 pt-4 mt-6">
-                <div className="space-y-4">
-                  {renderHistoricalField("Email", historicalData.emails)}
-                  {renderHistoricalField("Estado Civil", historicalData.estadosCivis)}
-                  {renderHistoricalField("Escolaridade", historicalData.escolaridades)}
-                  {renderHistoricalField("Ocupação", historicalData.ocupacoes)}
-                </div>
-              </div>
-            );
-          })()}
-        </div>
+          )}
+        </dl>
       ) : (
-        <div className="text-center text-gray-500 py-8">
-          Nenhuma informação encontrada
-        </div>
+        <p className="py-8 text-center text-slate-500">Nenhuma informação encontrada</p>
       )}
-    </div>
+    </Panel>
   );
 };
 

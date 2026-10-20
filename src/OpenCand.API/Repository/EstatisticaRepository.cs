@@ -3,7 +3,6 @@ using Microsoft.Extensions.Caching.Memory;
 using Npgsql;
 using OpenCand.API.Model;
 using OpenCand.Repository;
-using System.Text.Json;
 using static OpenCand.API.Model.GetValueSumRequest;
 
 namespace OpenCand.API.Repository
@@ -17,7 +16,7 @@ namespace OpenCand.API.Repository
             this.configuration = configuration;
         }
 
-        public async Task<List<MaioresEnriquecimento>> GetMaioresEnriquecimentos(GetValueSumRequestFilter? requestFilter = null)
+        public async Task<List<MaioresEnriquecimento>> GetMaioresEnriquecimentos(string cacheKey, GetValueSumRequestFilter? requestFilter = null)
         {
             requestFilter ??= new GetValueSumRequestFilter();
 
@@ -46,43 +45,32 @@ namespace OpenCand.API.Repository
 
             var mappingFilter = conditions.Count == 0
                 ? string.Empty
-                : $"WHERE EXISTS (SELECT 1 FROM candidato_mapping cm WHERE cm.idcandidato = ed.idcandidato AND {string.Join(" AND ", conditions)})";
-
-            string cacheKey = GenerateCacheKey("GetMaioresEnriquecimento", JsonSerializer.Serialize(requestFilter));
+                : $"WHERE EXISTS (SELECT 1 FROM candidato_mapping cm WHERE cm.idcandidato = e.idcandidato AND {string.Join(" AND ", conditions)})";
 
             var result = await GetOrSetCacheAsync(cacheKey, async () =>
             {
                 using (var connection = new NpgsqlConnection(ConnectionString))
                 {
+                    // mv_enriquecimento_candidato is indexed on enriquecimento DESC: the top 25 are read straight off the index,
+                    // checking the mapping filter row by row, and candidato is joined only for those 25.
                     return (await connection.QueryAsync<MaioresEnriquecimento>($@"
-                        WITH patrimonio AS (
-                            SELECT idcandidato, ano, valor
-                            FROM mv_bem_candidato_ano
-                        ),
-                        extremos_declaracao AS (
-                            SELECT
-                                idcandidato,
-                                MIN(ano) AS anoInicial,
-                                MAX(ano) AS anoFinal
-                            FROM patrimonio
-                            GROUP BY idcandidato
-                            HAVING COUNT(DISTINCT ano) >= 2
-                        )
                         SELECT
-                            ed.idcandidato,
+                            e.idcandidato,
                             c.nome,
-                            ed.anoInicial,
-                            p_ini.valor AS patrimonioInicial,
-                            ed.anoFinal,
-                            p_fim.valor AS patrimonioFinal,
-                            (p_fim.valor - p_ini.valor) AS enriquecimento
-                        FROM extremos_declaracao ed
-                        JOIN candidato c ON ed.idcandidato = c.idcandidato
-                        JOIN patrimonio p_ini ON ed.idcandidato = p_ini.idcandidato AND ed.anoInicial = p_ini.ano
-                        JOIN patrimonio p_fim ON ed.idcandidato = p_fim.idcandidato AND ed.anoFinal = p_fim.ano
-                        {mappingFilter}
-                        ORDER BY enriquecimento DESC
-                        LIMIT 25;", parameters)
+                            e.anoinicial,
+                            e.patrimonioinicial,
+                            e.anofinal,
+                            e.patrimoniofinal,
+                            e.enriquecimento
+                        FROM (
+                            SELECT e.*
+                            FROM mv_enriquecimento_candidato e
+                            {mappingFilter}
+                            ORDER BY e.enriquecimento DESC
+                            LIMIT 25
+                        ) e
+                        JOIN candidato c ON c.idcandidato = e.idcandidato
+                        ORDER BY e.enriquecimento DESC;", parameters)
                     ).AsList();
                 }
             });
@@ -99,10 +87,22 @@ namespace OpenCand.API.Repository
 
                 using (var connection = new NpgsqlConnection(ConnectionString))
                 {
-                    result.Partidos = (await connection.QueryAsync<string>(@"SELECT DISTINCT sigla FROM partido ORDER BY sigla ASC;")).AsList();
-                    result.SiglasUF = (await connection.QueryAsync<string>(@"SELECT DISTINCT siglauf FROM candidato_mapping ORDER BY siglauf ASC;")).AsList();
-                    result.Anos = (await connection.QueryAsync<int>(@"SELECT DISTINCT ano FROM candidato_mapping ORDER BY ano DESC;")).AsList();
-                    result.Cargos = (await connection.QueryAsync<string>(@"SELECT DISTINCT cargo FROM candidato_mapping ORDER BY cargo ASC;")).AsList();
+                    // One round trip, and a single scan of candidato_mapping for the three mapping dimensions
+                    // (sorted by the database, so the order matches its collation as before).
+                    using var multi = await connection.QueryMultipleAsync(@"
+                        SELECT DISTINCT sigla FROM partido ORDER BY sigla ASC;
+                        SELECT
+                            array_agg(DISTINCT siglauf ORDER BY siglauf ASC) AS siglasuf,
+                            array_agg(DISTINCT ano ORDER BY ano DESC) AS anos,
+                            array_agg(DISTINCT cargo ORDER BY cargo ASC) AS cargos
+                        FROM (SELECT DISTINCT ano, siglauf, cargo FROM candidato_mapping) d;");
+
+                    result.Partidos = (await multi.ReadAsync<string>()).AsList();
+                    var dimensions = await multi.ReadSingleAsync<(string[]? SiglasUF, int[]? Anos, string[]? Cargos)>();
+
+                    result.SiglasUF = dimensions.SiglasUF?.ToList() ?? new List<string>();
+                    result.Anos = dimensions.Anos?.ToList() ?? new List<int>();
+                    result.Cargos = dimensions.Cargos?.ToList() ?? new List<string>();
                 }
 
                 return result;

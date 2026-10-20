@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { FaCloudDownloadAlt, FaGoogleDrive } from 'react-icons/fa';
+import { FaGoogleDrive } from 'react-icons/fa';
+import { CalendarDaysIcon, CircleStackIcon, ClockIcon, CloudArrowDownIcon, Squares2X2Icon } from '@heroicons/react/24/outline';
 import { openCandApi } from '../api';
 import type { OpenCandDataAvailabilityStats, OpenCandDatabaseStats } from '../api/apiModels';
 import Card from '../shared/Card';
 import ErrorPage from './ErrorPage';
 import DataAvailabilityTable from './DataStats/DataAvailabilityTable';
+import { dataTypes } from './DataStats/dataTypes';
 import DbStatsTable from './DataStats/DbStatsTable';
-import GradientButton from '../shared/GradientButton';
 import DbIndexesStats from './DataStats/DbIndexesStats';
+import Button from '../shared/Button';
+import SectionHeading from '../shared/SectionHeading';
+import { LoadingBlock } from '../shared/Spinner';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 const DataStatsPage: React.FC = () => {
   const [stats, setStats] = useState<OpenCandDataAvailabilityStats | null>(null);
@@ -16,6 +21,8 @@ const DataStatsPage: React.FC = () => {
   const [dbLoading, setDbLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
+
+  usePageTitle('Dados Disponíveis');
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -47,14 +54,7 @@ const DataStatsPage: React.FC = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="backdrop-blur-md bg-white/90 rounded-2xl shadow-xl p-8 max-w-md w-full border border-white/30 flex flex-col items-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-600 border-t-transparent mb"></div>
-          <p className="text-base text-gray-700">Carregando dados...</p>
-        </div>
-      </div>
-    );
+    return <LoadingBlock heightClassName="min-h-[50vh]" colorClassName="border-indigo-400" text="Carregando dados..." />;
   }
 
   if (error) {
@@ -69,8 +69,8 @@ const DataStatsPage: React.FC = () => {
 
   if (!stats) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-lg text-gray-700">Nenhum dado disponível</p>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <p className="text-lg text-slate-400">Nenhum dado disponível</p>
       </div>
     );
   }
@@ -82,90 +82,84 @@ const DataStatsPage: React.FC = () => {
   });
   const sortedYears = Array.from(allYears).sort((a, b) => b - a);
 
+  const summary = [
+    { icon: Squares2X2Icon, value: String(dataTypes.length), label: 'Tipos de Dados' },
+    { icon: CalendarDaysIcon, value: String(sortedYears.length), label: 'Anos Disponíveis' },
+    {
+      icon: ClockIcon,
+      value: sortedYears.length > 0 ? `${Math.min(...sortedYears)} – ${Math.max(...sortedYears)}` : 'N/A',
+      label: 'Período',
+    },
+  ];
+
   return (
-    <div className="min-h-screen py-20 px-4 hover:cursor-default">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12 animate-slide-in-left">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 text-white">
-            Disponibilidade de Dados
-          </h1>
-          <p className="text-xl text-gray-400">
-            Visualize a disponibilidade dos dados por ano em nossa base
-          </p>
-          <div className="w-32 h-1 bg-gradient-to-r from-indigo-400 to-purple-400 mx-auto mt-6 rounded-full"></div>
-        </div>
+    <div className="mx-auto max-w-7xl px-4 pb-8 pt-10 sm:px-6 md:pt-14">
+      <SectionHeading
+        as="h1"
+        eyebrow="Transparência"
+        title="Disponibilidade de Dados"
+        subtitle="Visualize a disponibilidade dos dados por ano em nossa base"
+        className="mb-10 md:mb-12"
+      />
 
-        {/* Download DB Dump Section */}
-        <div className="flex justify-center mb-10 animate-slide-in-left backdrop-blur-xs bg-gray-800/10 rounded-xl shadow-lg hover:shadow-xl transform transition-all duration-200 overflow-hidden ring-1 ring-gray-700 hover:ring-indigo-300 px-8 py-6 flex flex-col md:flex-row items-center gap-4 max-w-xl-auto">
-          <div className="flex items-center gap-3 mb-2 md:mb-0">
-            <FaCloudDownloadAlt className="text-3xl text-green-400" />
-            <span className="text-lg font-semibold text-white">Download do Dump do Banco de Dados</span>
-          </div>
-          <GradientButton
-            href="https://drive.google.com/file/d/1cfMItrsAdv8y8YUNp04D33s6pYrRbmDn/view?usp=sharing"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 py-2 px-5"
-          >
-            <FaGoogleDrive className="text-xl" />
-            Google Drive
-          </GradientButton>
+      {/* Download DB Dump Section */}
+      <Card className="mx-auto mb-10 flex max-w-3xl flex-col items-center gap-5 text-center sm:flex-row sm:text-left">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+          <CloudArrowDownIcon className="h-6 w-6" aria-hidden="true" />
+        </span>
+        <div className="flex-1">
+          <h2 className="text-lg font-semibold text-white">Download do Dump do Banco de Dados</h2>
+          <p className="mt-1 text-sm text-slate-400">Baixe a base completa (PostgreSQL) para suas próprias análises.</p>
         </div>
+        <Button
+          href="https://drive.google.com/file/d/1cfMItrsAdv8y8YUNp04D33s6pYrRbmDn/view?usp=sharing"
+          target="_blank"
+          rel="noopener noreferrer"
+          variant="primary"
+        >
+          <FaGoogleDrive aria-hidden="true" />
+          Google Drive
+        </Button>
+      </Card>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <Card hasAnimation={true} className="bg-gray-800/10 rounded-xl">
-            <div className="text-center">
-              <div className="text-3xl mb-2">📊</div>
-              <div className="text-2xl font-bold text-white">6</div>
-              <div className="text-gray-400">Tipos de Dados</div>
+      {/* Stats Cards */}
+      <div className="mb-10 grid grid-cols-1 gap-5 md:grid-cols-3">
+        {summary.map(({ icon: Icon, value, label }) => (
+          <Card key={label} hasAnimation className="flex items-center gap-4">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300 ring-1 ring-inset ring-indigo-400/20">
+              <Icon className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div>
+              <div className="text-2xl font-bold text-white tabular-nums">{value}</div>
+              <div className="text-sm text-slate-400">{label}</div>
             </div>
           </Card>
-          <Card hasAnimation={true} className="bg-gray-800/10 rounded-xl">
-            <div className="text-center">
-              <div className="text-3xl mb-2">📅</div>
-              <div className="text-2xl font-bold text-white">{sortedYears.length}</div>
-              <div className="text-gray-400">Anos Disponíveis</div>
-            </div>
-          </Card>
-          <Card hasAnimation={true} className="bg-gray-800/10 rounded-xl">
-            <div className="text-center">
-              <div className="text-3xl mb-2">🗓️</div>
-              <div className="text-2xl font-bold text-white">
-                {sortedYears.length > 0 ? `${Math.min(...sortedYears)} - ${Math.max(...sortedYears)}` : 'N/A'}
-              </div>
-              <div className="text-gray-400">Período</div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Data Availability Table */}
-        <DataAvailabilityTable stats={stats} sortedYears={sortedYears} />
+        ))}
       </div>
 
+      {/* Data Availability Table */}
+      <DataAvailabilityTable stats={stats} sortedYears={sortedYears} />
+
       {/* Database Tech Stats Section */}
-      <div className="mt-20 flex justify-center">
-        <div className="bg-gray-800/10 backdrop-blur-xs rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.005] transition-all duration-200 overflow-hidden ring-1 ring-gray-700 hover:ring-indigo-300 mb-12 w-full max-w-2xl">
-          <div className="p-6 border-b border-gray-700/30 bg-gray-800/10">
-            <h2 className="text-2xl font-bold text-white">Dados Técnicas do Banco de Dados</h2>
-            <p className="text-gray-400 mt-2">Informações sobre tabelas, views materializadas e índices</p>
+      <div className="mx-auto mt-16 max-w-3xl overflow-hidden rounded-2xl bg-white/[0.04] ring-1 ring-inset ring-white/10 backdrop-blur-md">
+        <div className="flex items-center gap-3 border-b border-white/10 p-6">
+          <CircleStackIcon className="h-6 w-6 text-indigo-300" aria-hidden="true" />
+          <div>
+            <h2 className="text-xl font-semibold text-white">Dados Técnicos do Banco de Dados</h2>
+            <p className="mt-1 text-sm text-slate-400">Informações sobre tabelas, views materializadas e índices</p>
           </div>
-          {dbLoading ? (
-            <div className="flex items-center justify-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent mr-4"></div>
-              <span className="text-gray-300">Carregando dados do banco de dados...</span>
-            </div>
-          ) : dbError ? (
-            <div className="p-8 text-red-400">{dbError}</div>
-          ) : dbStats ? (
-            <div className="p-6 space-y-10">
-              <DbStatsTable title="Tabelas" items={dbStats.tables} showTotal />
-              <DbStatsTable title="Views Materializadas" items={dbStats.materializedViews} />
-              <DbIndexesStats amount={dbStats.indexes.amount} size={dbStats.indexes.size} />
-            </div>
-          ) : null}
         </div>
+        {dbLoading ? (
+          <LoadingBlock colorClassName="border-indigo-400" text="Carregando dados do banco de dados..." />
+        ) : dbError ? (
+          <div className="p-8 text-rose-300">{dbError}</div>
+        ) : dbStats ? (
+          <div className="space-y-8 p-6">
+            <DbStatsTable title="Tabelas" items={dbStats.tables} showTotal />
+            <DbStatsTable title="Views Materializadas" items={dbStats.materializedViews} />
+            <DbIndexesStats amount={dbStats.indexes.amount} size={dbStats.indexes.size} />
+          </div>
+        ) : null}
       </div>
     </div>
   );

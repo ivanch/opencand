@@ -1,147 +1,106 @@
 #root {
   margin: 0 auto;
   padding: 0;
-  text-align: center;
   position: relative;
   min-height: 100vh;
   width: 100%;
 }
 
-/* Ensure body and html have no margins/padding for full screen background */
 body, html {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
   scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
 }
 
 /* Custom animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
+  from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-in-out forwards;
-}
-
-/* New animations for DataStatsPage */
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 @keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(30px); }
+  from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slide-in-left {
-  from { opacity: 0; transform: translateX(-20px); }
+  from { opacity: 0; transform: translateX(-12px); }
   to { opacity: 1; transform: translateX(0); }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.8s ease-out forwards;
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
 }
 
-.animate-slide-up {
-  animation: slide-up 0.6s ease-out forwards;
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
 }
 
 .animate-fade-in-up {
-  animation: fade-in-up 0.8s ease-out forwards;
+  animation: fade-in-up 0.6s ease-out both;
 }
 
 .animate-slide-in-left {
-  animation: slide-in-left 0.6s ease-out forwards;
+  animation: slide-in-left 0.5s ease-out both;
 }
 
-.delay-100 {
-  animation-delay: 0.1s;
+/* Minimal scrollbar for scrollable lists */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
 }
 
-.delay-200 {
-  animation-delay: 0.2s;
-}
-
-/* Custom scrollbar for search results */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
+  background: transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 10px;
+  background-color: rgba(148, 163, 184, 0.5);
+  border-radius: 9999px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background-color: rgba(100, 116, 139, 0.7);
 }
 
 .scrollbar-hide {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* Internet Explorer and Edge */
-  overflow: -moz-scrollbars-none; /* Old versions of Firefox */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Loading placeholder: a soft moving highlight */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
-/* Custom minimal scrollbar styles */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+.skeleton {
+  background-image: linear-gradient(90deg, rgb(148 163 184 / 0.12) 0%, rgb(148 163 184 / 0.28) 50%, rgb(148 163 184 / 0.12) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: 0.5rem;
 }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 1px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(156, 163, 175, 0.5);
-  border-radius: 2px;
-  transition: background-color 0.2s ease;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(107, 114, 128, 0.7);
-}
-
-.custom-scrollbar::-webkit-scrollbar-corner {
-  background: transparent;
-}
-
-/* Custom fade-in animation for dropdown content */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out forwards;
 }

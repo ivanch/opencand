@@ -1,75 +1,80 @@
 import React from 'react';
+import { CheckIcon, MinusIcon } from '@heroicons/react/24/outline';
 import type { OpenCandDataAvailabilityStats } from '../../api/apiModels';
+import { dataTypes } from './dataTypes';
 
 interface DataAvailabilityTableProps {
   stats: OpenCandDataAvailabilityStats;
   sortedYears: number[];
 }
 
-const dataTypes = [
-  { key: 'candidatos', label: 'Candidatos', icon: '👤' },
-  { key: 'bemCandidatos', label: 'Bens de Candidatos', icon: '💰' },
-  { key: 'despesaCandidatos', label: 'Despesas de Candidatos', icon: '💸' },
-  { key: 'receitaCandidatos', label: 'Receitas de Candidatos', icon: '💵' },
-  { key: 'redeSocialCandidatos', label: 'Redes Sociais', icon: '📱' },
-  { key: 'fotosCandidatos', label: 'Fotos de Candidatos (API)', icon: '📸' },
-];
-
 const DataAvailabilityTable: React.FC<DataAvailabilityTableProps> = ({ stats, sortedYears }) => {
   return (
-    <div className="bg-gray-800/10 backdrop-blur-xs rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.005] transition-all duration-200 overflow-hidden ring-1 ring-gray-700 hover:ring-indigo-300">
-      <div className="p-6 border-b border-gray-700/30 bg-gray-800/10">
-        <h2 className="text-2xl font-bold text-white">
-          Matriz de Disponibilidade
-        </h2>
-        <p className="text-gray-400 mt-2">
-          ✅ Disponível • ❌ Não Disponível
-        </p>
+    <div className="overflow-hidden rounded-2xl bg-white/[0.04] ring-1 ring-inset ring-white/10 backdrop-blur-md">
+      <div className="flex flex-col gap-3 border-b border-white/10 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-white">Matriz de Disponibilidade</h2>
+          <p className="mt-1 text-sm text-slate-400">Quais dados existem para cada ano eleitoral</p>
+        </div>
+        <div className="flex gap-2 text-xs">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+            <CheckIcon className="h-3.5 w-3.5" aria-hidden="true" /> Disponível
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1 text-slate-400 ring-1 ring-inset ring-white/10">
+            <MinusIcon className="h-3.5 w-3.5" aria-hidden="true" /> Não disponível
+          </span>
+        </div>
       </div>
-      
-      <div className="overflow-x-auto">
-        <table className="w-full">
+
+      <div className="overflow-x-auto custom-scrollbar">
+        <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-800/10">
-              <th className="text-left p-4 text-white font-semibold border-b border-gray-700/30 left-0 bg-gray-800/10">
+            <tr>
+              <th className="sticky left-0 z-10 bg-surface-900 p-4 text-left font-semibold text-slate-300 border-b border-white/10">
                 Tipo de Dado
               </th>
-              {sortedYears.map((year, index) => (
-                <th 
-                  key={year} 
-                  className="text-center p-4 text-white font-semibold border-b border-gray-700/30 animate-slide-in-left"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
+              {sortedYears.map((year) => (
+                <th key={year} className="border-b border-white/10 p-4 text-center font-semibold text-slate-300 tabular-nums">
                   {year}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {dataTypes.map((dataType, rowIndex) => (
-              <tr 
-                key={dataType.key}
-                className="hover:bg-gray-800/10 transition-all duration-300 animate-slide-in-left"
-                style={{ animationDelay: `${rowIndex * 100}ms` }}
-              >
-                <td className="p-4 border-b border-gray-700/20 text-white left-0 bg-gray-800/10">
-                  <div className="flex items-center space-x-3">
-                    <span className="text-xl">{dataType.icon}</span>
-                    <span>{dataType.label}</span>
-                  </div>
-                </td>
-                {sortedYears.map((year) => {
-                  const isAvailable = (stats[dataType.key as keyof OpenCandDataAvailabilityStats] as number[]).includes(year);
-                  return (
-                    <td key={year} className="text-center p-4 border-b border-gray-700/20">
-                      <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition-all duration-100 ${isAvailable ? 'bg-green-500/20 text-green-300 hover:bg-green-500/30 hover:scale-110 hover:cursor-default' : 'bg-red-500/20 text-red-300 hover:bg-red-500/30 hover:cursor-default'}`}>
-                        {isAvailable ? '✅' : '❌'}
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+            {dataTypes.map((dataType, rowIndex) => {
+              const Icon = dataType.icon;
+              return (
+                <tr
+                  key={dataType.key}
+                  className="group animate-slide-in-left"
+                  style={{ animationDelay: `${rowIndex * 60}ms` }}
+                >
+                  <td className="sticky left-0 z-10 whitespace-nowrap border-b border-white/5 bg-surface-900 p-4 text-slate-100 group-hover:bg-surface-800">
+                    <div className="flex items-center gap-3">
+                      <Icon className="h-5 w-5 text-indigo-300" aria-hidden="true" />
+                      <span>{dataType.label}</span>
+                    </div>
+                  </td>
+                  {sortedYears.map((year) => {
+                    const isAvailable = stats[dataType.key].includes(year);
+                    return (
+                      <td key={year} className="border-b border-white/5 p-4 text-center group-hover:bg-white/[0.03]">
+                        <span
+                          className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${isAvailable
+                            ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-400/30'
+                            : 'bg-white/[0.03] text-slate-600'}`}
+                          title={`${dataType.label} ${year}: ${isAvailable ? 'disponível' : 'não disponível'}`}
+                        >
+                          {isAvailable
+                            ? <CheckIcon className="h-4 w-4" aria-label="Disponível" />
+                            : <MinusIcon className="h-4 w-4" aria-label="Não disponível" />}
+                        </span>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

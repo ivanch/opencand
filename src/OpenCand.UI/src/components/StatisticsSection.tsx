@@ -1,26 +1,38 @@
 import React, { useState, useEffect } from 'react';
+import { BanknotesIcon, CalendarDaysIcon, LinkIcon, UsersIcon } from '@heroicons/react/24/outline';
 import { openCandApi, type PlatformStats, ApiError } from '../api';
 import Card from '../shared/Card';
+import SectionHeading from '../shared/SectionHeading';
+import { formatCompactNumber, formatCurrencyCompact } from '../utils/utils';
 
 interface StatCardProps {
+  icon: React.ElementType;
   title: string;
   value: string;
   description: string;
   isLoading?: boolean;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, description, isLoading = false }) => {
+const StatCard: React.FC<StatCardProps> = ({ icon: Icon, title, value, description, isLoading = false }) => {
   return (
-    <Card hasAnimation={true} disableCursor={true} height={11} width={20}>
-      <h3 className="text-indigo-400 text-xl font-semibold mb-2">{title}</h3>
+    <Card hasAnimation className="h-full text-left">
+      <div className="mb-5 flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300 ring-1 ring-inset ring-indigo-400/20">
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <h3 className="text-sm font-medium text-slate-300">{title}</h3>
+      </div>
       {isLoading ? (
-        <div className="h-12 flex items-center justify-center">
-          <div className="animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
+        <div className="space-y-3" aria-hidden="true">
+          <div className="skeleton h-9 w-32" />
+          <div className="skeleton h-4 w-full" />
         </div>
       ) : (
-        <p className="text-4xl font-bold text-white mb-3">{value}</p>
+        <>
+          <p className="text-4xl font-bold tracking-tight text-white tabular-nums">{value}</p>
+          <p className="mt-2 text-sm text-slate-400">{description}</p>
+        </>
       )}
-      <p className="text-gray-400 text-sm">{description}</p>
     </Card>
   );
 };
@@ -44,14 +56,6 @@ const StatisticsSection: React.FC = () => {
         } else {
           setError('Erro inesperado ao carregar estatísticas');
         }
-        // Use default stats as fallback
-        setStats({
-          totalCandidatos: 0,
-          totalBemCandidatos: 0,
-          totalEleicoes: 0,
-          totalValorBemCandidatos: 0,
-          totalRedesSociais: 0
-        });
       } finally {
         setIsLoading(false);
       }
@@ -60,73 +64,61 @@ const StatisticsSection: React.FC = () => {
     fetchStats();
   }, []);
 
-  const formatNumber = (num: number): string => {
-    if (num >= 1000000000000) {
-      return `${(num / 1000000000000).toFixed(1)} trilhão`;
-    } else if (num >= 1000000000) {
-      return `${(num / 1000000000).toFixed(1)} bilhão`;
-    } else if (num >= 1000000) {
-      return `${(num / 1000000).toFixed(1)} milhão`;
-    } else if (num >= 1000) {
-      return `${(num / 1000).toFixed(0)}K`;
-    }
-    return num.toLocaleString('pt-BR');
-  };
-
-  const formatCurrency = (value: number): string => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      notation: 'compact',
-      maximumSignificantDigits: 3
-    }).format(value);
-  };
-
   const statisticsData = [
     {
-      title: "Total de Candidatos",
-      value: isLoading ? "" : `+${formatNumber(stats?.totalCandidatos || 0)}`,
-      description: "Registros de candidaturas na plataforma"
+      icon: UsersIcon,
+      title: 'Candidatos',
+      value: `+${formatCompactNumber(stats?.totalCandidatos)}`,
+      description: 'Registros de candidaturas na plataforma',
     },
     {
-      title: "Total de Bens Registrados", 
-      value: isLoading ? "" : `+${formatNumber(stats?.totalBemCandidatos || 0)}`,
-      description: isLoading ? "" : `Somando ${formatCurrency(stats?.totalValorBemCandidatos || 0)} em Patrimônio agregado declarado pelos candidatos`
+      icon: BanknotesIcon,
+      title: 'Bens Registrados',
+      value: `+${formatCompactNumber(stats?.totalBemCandidatos)}`,
+      description: `Somando ${formatCurrencyCompact(stats?.totalValorBemCandidatos)} em patrimônio declarado`,
     },
     {
-      title: "Total de Redes Sociais",
-      value: isLoading ? "" : formatNumber(stats?.totalRedesSociais || 0),
-      description: "Redes sociais conectadas aos candidatos"
+      icon: LinkIcon,
+      title: 'Redes Sociais',
+      value: formatCompactNumber(stats?.totalRedesSociais),
+      description: 'Perfis vinculados aos candidatos',
     },
     {
-      title: "Total de Eleições",
-      value: isLoading ? "" : formatNumber(stats?.totalEleicoes || 0),
-      description: "Eleições processadas no sistema"
-    }
+      icon: CalendarDaysIcon,
+      title: 'Eleições',
+      value: formatCompactNumber(stats?.totalEleicoes),
+      description: 'Eleições processadas no sistema',
+    },
   ];
 
   return (
-    <section id="stats" className="py-20">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="text-center mb-12 animate-fade-in">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Dados em Números
-          </h2>
-          <p className="text-xl text-gray-400">
-            Estatísticas da nossa plataforma de dados eleitorais
+    <section id="stats" className="py-20 md:py-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <SectionHeading
+          eyebrow="Em números"
+          title="Dados em Números"
+          subtitle="Estatísticas da nossa plataforma de dados eleitorais"
+          className="mb-12"
+        />
+
+        {error && !isLoading ? (
+          <p className="mx-auto max-w-xl rounded-2xl bg-rose-500/10 px-6 py-4 text-center text-sm text-rose-200 ring-1 ring-inset ring-rose-400/20">
+            {error}
           </p>
-        </div>
-        
-        <div className="flex flex-wrap justify-center gap-8">
-          {statisticsData.map((stat) => (
-            <StatCard 
-              title={stat.title} 
-              value={stat.value} 
-              description={stat.description}
-              isLoading={isLoading}
-            />
-          ))}
-        </div>
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {statisticsData.map((stat) => (
+              <StatCard
+                key={stat.title}
+                icon={stat.icon}
+                title={stat.title}
+                value={stat.value}
+                description={stat.description}
+                isLoading={isLoading}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

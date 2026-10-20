@@ -25,4 +25,20 @@ public class SwapTableTests
         Assert.Contains("CREATE MATERIALIZED VIEW mv_despesas_candidato", embedded);
         Assert.Contains("CREATE UNIQUE INDEX", embedded);
     }
+
+    [Theory]
+    [InlineData("mv_bem_resumo", "mv_bem_candidato")]
+    [InlineData("mv_despesas_resumo", "mv_despesas_candidato")]
+    [InlineData("mv_receitas_resumo", "mv_receitas_candidato")]
+    [InlineData("mv_enriquecimento_candidato", "mv_bem_candidato_ano")]
+    public void DependentViewsAreDroppedBeforeAndCreatedAfterTheirSource(string view, string source)
+    {
+        var sql = MaterializedViews.LoadSql();
+
+        Assert.True(sql.IndexOf($"DROP MATERIALIZED VIEW IF EXISTS {view};", StringComparison.Ordinal)
+                    < sql.IndexOf($"DROP MATERIALIZED VIEW IF EXISTS {source};", StringComparison.Ordinal));
+        Assert.True(sql.IndexOf($"CREATE MATERIALIZED VIEW {source} ", StringComparison.Ordinal)
+                    < sql.IndexOf($"CREATE MATERIALIZED VIEW {view} ", StringComparison.Ordinal));
+        Assert.Contains($"CREATE UNIQUE INDEX ux_{view} ON {view}", sql);
+    }
 }

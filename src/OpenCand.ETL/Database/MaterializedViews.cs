@@ -10,9 +10,11 @@ namespace OpenCand.ETL.Database
     /// </summary>
     public sealed class MaterializedViews
     {
+        // Dependency order: views built on other views come after them (refreshed in this order, dropped in reverse).
         private static readonly string[] ViewNames =
         {
-            "mv_bem_candidato", "mv_bem_candidato_ano", "mv_despesas_candidato", "mv_receitas_candidato", "mv_candidato_mapping_analytics"
+            "mv_bem_candidato", "mv_bem_candidato_ano", "mv_despesas_candidato", "mv_receitas_candidato", "mv_candidato_mapping_analytics",
+            "mv_bem_resumo", "mv_despesas_resumo", "mv_receitas_resumo", "mv_enriquecimento_candidato"
         };
 
         private readonly NpgsqlDataSource dataSource;
@@ -38,7 +40,7 @@ namespace OpenCand.ETL.Database
                 await using var connection = await dataSource.OpenConnectionAsync(ct);
                 await using var tx = await connection.BeginTransactionAsync(ct);
 
-                foreach (var view in ViewNames)
+                foreach (var view in Enumerable.Reverse(ViewNames))
                     await connection.ExecuteAsync($"DROP MATERIALIZED VIEW IF EXISTS {view}", ct, timeoutSeconds: 0);
 
                 logger.LogInformation("Swapping in {Count} table(s) and recreating materialized views", swaps.Count);

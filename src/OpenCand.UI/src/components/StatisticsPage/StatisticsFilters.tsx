@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { FilterState } from './StatisticsPage';
 import type { StatisticsConfig } from '../../api/apiStatisticsModels';
 import { openCandApi } from '../../api/openCandApi';
+import { ChevronUpDownIcon, FunnelIcon } from '@heroicons/react/24/outline';
 
 interface StatisticsFiltersProps {
   filters: FilterState;
@@ -57,115 +58,84 @@ const StatisticsFilters: React.FC<StatisticsFiltersProps> = ({
     onFiltersChange(localFilters);
   };
 
-  return (
-    <form
-      className="h-full flex flex-col justify-between space-y-4 md:space-y-6"
-      onSubmit={handleApply}
-      style={{ minHeight: '300px' }} // Reduced min-height for mobile
-    >
-      <div className="flex-1 flex flex-col space-y-4 md:space-y-6">
-        <div>
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4">
-            Filtros
-          </h2>
-          {configError && (
-            <div className="mb-3 md:mb-4 p-2 md:p-3 bg-red-100 border border-red-300 rounded-lg text-red-700 text-xs md:text-sm">
-              {configError}
-            </div>
-          )}
-        </div>
+  const disabled = isLoading || configLoading;
+  const hasActiveFilters = !!(filters.partido || filters.uf || filters.ano || filters.cargo);
 
-        {/* Party Filter */}
-        <div className="space-y-1 md:space-y-2">
-          <label className="block text-xs md:text-sm font-semibold text-gray-600 uppercase tracking-wide">
-            Partido
-          </label>
-          <select
-            value={localFilters.partido || ''}
-            onChange={(e) => handleLocalChange('partido', e.target.value)}
-            disabled={isLoading || configLoading}
-            className="w-50 px-3 py-2 md:px-3 md:py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
-          >
-            <option value="">Todos os Partidos</option>
-            {config?.partidos.map((partido) => (
-              <option key={partido} value={partido}>
-                {partido}
-              </option>
-            ))}
-          </select>
-        </div>
+  const handleClear = () => {
+    const cleared: FilterState = { ...localFilters, partido: null, uf: null, ano: null, cargo: undefined };
+    setLocalFilters(cleared);
+    onFiltersChange(cleared);
+  };
 
-        {/* UF Filter */}
-        <div className="space-y-1 md:space-y-2">
-          <label className="block text-xs md:text-sm font-semibold text-gray-600 uppercase tracking-wide">
-            UF
-          </label>
-          <select
-            value={localFilters.uf || ''}
-            onChange={(e) => handleLocalChange('uf', e.target.value)}
-            disabled={isLoading || configLoading}
-            className="w-50 px-3 py-2 md:px-3 md:py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
-          >
-            <option value="">Todos os Estados</option>
-            {config?.siglasUF.map((uf) => (
-              <option key={uf} value={uf}>
-                {uf}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Year Filter */}
-        <div className="space-y-1 md:space-y-2">
-          <label className="block text-xs md:text-sm font-semibold text-gray-600 uppercase tracking-wide">
-            Ano
-          </label>
-          <select
-            value={localFilters.ano || ''}
-            onChange={(e) => handleLocalChange('ano', e.target.value ? Number(e.target.value) : null)}
-            disabled={isLoading || configLoading}
-            className="w-50 px-3 py-2 md:px-3 md:py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
-          >
-            <option value="">Todos os Anos</option>
-            {config?.anos.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Cargo Filter */}
-        <div className="space-y-1 md:space-y-2">
-          <label className="block text-xs md:text-sm font-semibold text-gray-600 uppercase tracking-wide">
-            Cargo
-          </label>
-          <select
-            value={localFilters.cargo || ''}
-            onChange={(e) => handleLocalChange('cargo', e.target.value)}
-            disabled={isLoading || configLoading}
-            className="w-50 px-3 py-2 md:px-3 md:py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
-          >
-            <option value="">Todos os Cargos</option>
-            {config?.cargos.map((cargo) => (
-              <option key={cargo} value={cargo}>
-                {cargo}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Apply Filters Button */}
-      <div className="pt-3 md:pt-4">
-        <button
-          type="submit"
-          disabled={isLoading || configLoading}
-          className="w-60 px-3 py-2 md:px-4 md:py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none hover:cursor-pointer text-sm md:text-base"
+  const renderSelect = (
+    id: string,
+    label: string,
+    value: string | number,
+    onChange: (value: string) => void,
+    placeholder: string,
+    options: ReadonlyArray<string | number> | undefined,
+  ) => (
+    <div>
+      <label htmlFor={id} className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-slate-500">
+        {label}
+      </label>
+      <div className="relative">
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          className="w-full cursor-pointer appearance-none rounded-xl border-0 bg-slate-50 py-2.5 pl-3 pr-10 text-sm text-slate-900 ring-1 ring-inset ring-slate-200 transition-shadow hover:ring-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isLoading || configLoading ? 'Carregando...' : 'Aplicar Filtros'}
-        </button>
+          <option value="">{placeholder}</option>
+          {options?.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+        <ChevronUpDownIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
       </div>
+    </div>
+  );
+
+  return (
+    <form className="flex flex-col gap-5" onSubmit={handleApply}>
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+          <FunnelIcon className="h-4 w-4 text-indigo-600" aria-hidden="true" />
+          Filtros
+        </h2>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={handleClear}
+            disabled={disabled}
+            className="text-xs font-medium text-indigo-600 hover:text-indigo-500 disabled:opacity-50"
+          >
+            Limpar filtros
+          </button>
+        )}
+      </div>
+
+      {configError && (
+        <div className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 ring-1 ring-inset ring-rose-200">
+          {configError}
+        </div>
+      )}
+
+      {renderSelect('filter-partido', 'Partido', localFilters.partido || '', (value) => handleLocalChange('partido', value), 'Todos os Partidos', config?.partidos)}
+      {renderSelect('filter-uf', 'UF', localFilters.uf || '', (value) => handleLocalChange('uf', value), 'Todos os Estados', config?.siglasUF)}
+      {renderSelect('filter-ano', 'Ano', localFilters.ano || '', (value) => handleLocalChange('ano', value ? Number(value) : null), 'Todos os Anos', config?.anos)}
+      {renderSelect('filter-cargo', 'Cargo', localFilters.cargo || '', (value) => handleLocalChange('cargo', value), 'Todos os Cargos', config?.cargos)}
+
+      <button
+        type="submit"
+        disabled={disabled}
+        className="mt-1 w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {disabled ? 'Carregando...' : 'Aplicar Filtros'}
+      </button>
     </form>
   );
 };

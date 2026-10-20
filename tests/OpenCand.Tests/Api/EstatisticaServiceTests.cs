@@ -45,6 +45,20 @@ public class EstatisticaServiceTests
     }
 
     [Fact]
+    public void EnriquecimentoCacheKey_IsNormalizedAndDiffersByFilter()
+    {
+        var a = EstatisticaService.BuildEnriquecimentoCacheKey(new() { Uf = " sp ", Partido = " PT" });
+        var b = EstatisticaService.BuildEnriquecimentoCacheKey(new() { Uf = "SP", Partido = "PT" });
+        var c = EstatisticaService.BuildEnriquecimentoCacheKey(new() { Uf = "SP", Partido = "PT", Ano = 2022 });
+
+        Assert.Equal(a, b);
+        Assert.NotEqual(b, c);
+        Assert.Equal(EstatisticaService.BuildEnriquecimentoCacheKey(null), EstatisticaService.BuildEnriquecimentoCacheKey(new()));
+        Assert.NotEqual(EstatisticaService.BuildEnriquecimentoCacheKey(null),
+            EstatisticaService.BuildValueSumCacheKey(Request()));
+    }
+
+    [Fact]
     public void BuildQuery_NeverInlinesFilterValues()
     {
         var malicious = "PT' OR 1=1; DROP TABLE candidato; --";

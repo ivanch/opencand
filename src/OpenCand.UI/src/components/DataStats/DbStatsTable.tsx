@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatBytes } from '../../utils/utils';
 
 interface DbStatItem {
   name: string;
@@ -12,12 +13,7 @@ interface DbStatsTableProps {
   showTotal?: boolean;
 }
 
-const formatSize = (sizeInBytes: number): string => {
-  const sizeMB = sizeInBytes / 1024 / 1024;
-  return sizeMB > 1024
-    ? `${(sizeMB / 1024).toFixed(2)} GB`
-    : `${sizeMB.toFixed(2)} MB`;
-};
+const th = 'p-3 text-xs font-semibold uppercase tracking-wider text-slate-400 border-b border-white/10';
 
 const DbStatsTable: React.FC<DbStatsTableProps> = ({ title, items, showTotal = false }) => {
   const totalSize = showTotal ? items.reduce((acc, item) => acc + item.totalSize, 0) : 0;
@@ -25,29 +21,29 @@ const DbStatsTable: React.FC<DbStatsTableProps> = ({ title, items, showTotal = f
 
   return (
     <div>
-      <h3 className="text-xl font-semibold text-white mb-2">{title}</h3>
-      <div className="overflow-x-auto" style={{maxHeight: '32rem'}}>
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-800/10">
-              <th className="p-3 text-white font-semibold border-b border-gray-700/30">Nome</th>
-              <th className="p-3 text-white font-semibold border-b border-gray-700/30">Tamanho Total</th>
-              <th className="p-3 text-white font-semibold border-b border-gray-700/30">Entradas</th>
+      <h3 className="mb-3 text-base font-semibold text-white">{title}</h3>
+      <div className="overflow-auto rounded-xl ring-1 ring-inset ring-white/10 custom-scrollbar" style={{ maxHeight: '32rem' }}>
+        <table className="w-full border-collapse text-left text-sm">
+          <thead className="sticky top-0 bg-surface-900">
+            <tr>
+              <th className={th}>Nome</th>
+              <th className={`${th} text-right`}>Tamanho Total</th>
+              <th className={`${th} text-right`}>Entradas</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-white/5">
             {items.map((item) => (
-              <tr key={item.name} className="hover:bg-gray-800/10 transition-all duration-200">
-                <td className="p-3 text-white">{item.name.replace(/^public\./, '')}</td>
-                <td className="p-3 text-gray-300">{formatSize(item.totalSize)}</td>
-                <td className="p-3 text-gray-300">{item.entries.toLocaleString()}</td>
+              <tr key={item.name} className="transition-colors hover:bg-white/[0.03]">
+                <td className="p-3 font-mono text-[13px] text-slate-100">{item.name.replace(/^public\./, '')}</td>
+                <td className="p-3 text-right text-slate-300 tabular-nums">{formatBytes(item.totalSize)}</td>
+                <td className="p-3 text-right text-slate-300 tabular-nums">{item.entries.toLocaleString('pt-BR')}</td>
               </tr>
             ))}
             {showTotal && (
-              <tr className="font-bold bg-gray-900/30">
+              <tr className="bg-white/[0.04] font-semibold">
                 <td className="p-3 text-white">Total</td>
-                <td className="p-3 text-gray-300">{formatSize(totalSize)}</td>
-                <td className="p-3 text-gray-300">{totalEntries.toLocaleString()}</td>
+                <td className="p-3 text-right text-white tabular-nums">{formatBytes(totalSize)}</td>
+                <td className="p-3 text-right text-white tabular-nums">{totalEntries.toLocaleString('pt-BR')}</td>
               </tr>
             )}
           </tbody>

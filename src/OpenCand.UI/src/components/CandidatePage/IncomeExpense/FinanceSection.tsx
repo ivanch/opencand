@@ -3,11 +3,11 @@ import {
   BuildingOfficeIcon,
   CalendarIcon,
   ChevronDownIcon,
-  ChevronUpIcon,
   UserIcon,
 } from '@heroicons/react/24/outline';
 import { isRequestCancelled, type YearSummary } from '../../../api';
-import { formatDateToDDMMYYYY } from '../../../utils/utils';
+import { formatCurrency, formatDateToDDMMYYYY } from '../../../utils/utils';
+import Spinner from '../../../shared/Spinner';
 import type { FinanceAccent, FinanceKind, FinanceRow } from './financeKinds';
 
 const PAGE_SIZE = 50;
@@ -15,20 +15,20 @@ const PAGE_SIZE = 50;
 // Tailwind only generates classes it can find as whole strings, so they are listed per accent.
 const ACCENT_CLASSES: Record<FinanceAccent, { text: string; spinner: string; summary: string; border: string; button: string; icon: string }> = {
   red: {
-    text: 'text-red-600',
-    spinner: 'border-red-600',
-    summary: 'bg-gradient-to-r from-red-50 to-orange-50 border-red-100',
-    border: 'border-red-500',
-    button: 'bg-red-600 hover:bg-red-700',
-    icon: 'text-red-600',
+    text: 'text-rose-600',
+    spinner: 'border-rose-600',
+    summary: 'bg-rose-50/70 ring-rose-100',
+    border: 'border-rose-400',
+    button: 'bg-rose-600 hover:bg-rose-500',
+    icon: 'bg-rose-50 text-rose-600',
   },
   green: {
-    text: 'text-green-600',
-    spinner: 'border-green-600',
-    summary: 'bg-gradient-to-r from-green-50 to-blue-50 border-green-100',
-    border: 'border-green-500',
-    button: 'bg-green-600 hover:bg-green-700',
-    icon: 'text-green-600',
+    text: 'text-emerald-600',
+    spinner: 'border-emerald-600',
+    summary: 'bg-emerald-50/70 ring-emerald-100',
+    border: 'border-emerald-400',
+    button: 'bg-emerald-600 hover:bg-emerald-500',
+    icon: 'bg-emerald-50 text-emerald-600',
   },
 };
 
@@ -41,9 +41,6 @@ interface YearState {
 }
 
 const EMPTY_YEAR: YearState = { rows: [], total: 0, page: 0, loading: false, error: false };
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 interface FinanceSectionProps {
   idCandidato: string;
@@ -126,126 +123,125 @@ const FinanceSection: React.FC<FinanceSectionProps> = ({ idCandidato, kind, summ
     });
   };
 
+  const th = 'px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap';
+
   return (
     <div>
-      <div className="flex items-center mb-4">
-        <Icon className={`h-6 w-6 ${accent.icon} mr-2`} />
-        <h3 className="text-xl font-bold text-gray-900">{kind.title}</h3>
+      <div className="mb-4 flex items-center gap-2.5">
+        <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${accent.icon}`}>
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </span>
+        <h3 className="text-base font-semibold text-slate-900">{kind.title}</h3>
       </div>
 
       {sortedSummary.length === 0 ? (
-        <div className="text-center text-gray-500 py-6">
-          <div className="flex flex-col items-center">
-            <Icon className="h-10 w-10 text-gray-300 mb-2" />
-            <span>{kind.emptyText}</span>
-          </div>
+        <div className="flex flex-col items-center py-6 text-center text-slate-500">
+          <Icon className="mb-2 h-10 w-10 text-slate-300" />
+          <span>{kind.emptyText}</span>
         </div>
       ) : (
         <>
-          <div className={`${accent.summary} p-4 rounded-lg mb-4 border`}>
-            <div className="flex items-center justify-between">
-              <span className="text-lg font-semibold text-gray-900">{kind.totalLabel}</span>
-              <span className={`text-xl font-bold ${accent.text}`}>{formatCurrency(grandTotal)}</span>
-            </div>
+          <div className={`mb-4 flex items-center justify-between rounded-xl p-4 ring-1 ring-inset ${accent.summary}`}>
+            <span className="text-sm font-medium text-slate-700">{kind.totalLabel}</span>
+            <span className={`text-xl font-bold tabular-nums ${accent.text}`}>{formatCurrency(grandTotal)}</span>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {sortedSummary.map(({ ano, quantidade, total }) => {
               const isExpanded = expandedYears.has(ano);
               const state = years[ano] ?? EMPTY_YEAR;
               const remaining = Math.max(quantidade - state.rows.length, 0);
 
               return (
-                <div key={ano} className="border border-gray-200 rounded-lg overflow-hidden">
+                <div key={ano} className="overflow-hidden rounded-xl ring-1 ring-inset ring-slate-200">
                   <button
+                    type="button"
                     onClick={() => toggleYear(ano)}
-                    className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between transition-colors"
+                    className={`flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors ${isExpanded ? 'bg-slate-50' : 'hover:bg-slate-50'}`}
                     aria-expanded={isExpanded}
                   >
-                    <div className="flex items-center">
-                      <CalendarIcon className="h-5 w-5 text-gray-600 mr-2" />
-                      <span className="font-semibold text-gray-900">{ano}</span>
-                      <span className="ml-2 text-sm text-gray-600">
-                        ({quantidade} {quantidade === 1 ? 'item' : 'itens'})
+                    <div className="flex items-center gap-3">
+                      <CalendarIcon className="h-5 w-5 text-slate-400" aria-hidden="true" />
+                      <span className="font-semibold text-slate-900 tabular-nums">{ano}</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                        {quantidade} {quantidade === 1 ? 'item' : 'itens'}
                       </span>
                     </div>
-                    <div className="flex items-center">
-                      <span className={`font-bold ${accent.text} mr-2`}>{formatCurrency(total)}</span>
-                      {isExpanded ? (
-                        <ChevronUpIcon className="h-5 w-5 text-gray-600" />
-                      ) : (
-                        <ChevronDownIcon className="h-5 w-5 text-gray-600" />
-                      )}
+                    <div className="flex items-center gap-3">
+                      <span className={`font-semibold tabular-nums ${accent.text}`}>{formatCurrency(total)}</span>
+                      <ChevronDownIcon className={`h-5 w-5 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} aria-hidden="true" />
                     </div>
                   </button>
 
                   {isExpanded && (
-                    <div className="bg-white">
+                    <div className="border-t border-slate-100 animate-fadeIn">
                       {state.rows.length > 0 && (
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto custom-scrollbar">
                           <table className="w-full text-sm">
-                            <thead className="bg-gray-50 border-b">
+                            <thead className="bg-slate-50/60">
                               <tr>
-                                <th className="px-4 py-3 text-left font-medium text-gray-900">Data</th>
-                                <th className="px-4 py-3 text-left font-medium text-gray-900">{kind.counterpartHeader}</th>
-                                <th className="px-4 py-3 text-left font-medium text-gray-900">Descrição</th>
-                                <th className="px-4 py-3 text-right font-medium text-gray-900">Valor</th>
+                                <th className={th}>Data</th>
+                                <th className={th}>{kind.counterpartHeader}</th>
+                                <th className={th}>Descrição</th>
+                                <th className={`${th} text-right`}>Valor</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200">
+                            <tbody className="divide-y divide-slate-100">
                               {state.rows.map(row => {
                                 const isRowExpanded = expandedRows.has(row.id);
                                 return (
                                   <React.Fragment key={row.id}>
                                     <tr
-                                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                                      className={`cursor-pointer transition-colors ${isRowExpanded ? 'bg-slate-50' : 'hover:bg-slate-50'}`}
                                       onClick={() => toggleRow(row.id)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                          e.preventDefault();
+                                          toggleRow(row.id);
+                                        }
+                                      }}
+                                      tabIndex={0}
+                                      aria-expanded={isRowExpanded}
                                     >
-                                      <td className="px-4 py-3 text-gray-900">{formatDateToDDMMYYYY(row.data)}</td>
+                                      <td className="whitespace-nowrap px-4 py-3 text-slate-600 tabular-nums">{formatDateToDDMMYYYY(row.data)}</td>
                                       <td className="px-4 py-3">
-                                        <div className="flex items-center">
+                                        <div className="flex items-center gap-2">
                                           {row.isPerson ? (
-                                            <UserIcon className="h-4 w-4 text-gray-400 mr-2" />
+                                            <UserIcon className="h-4 w-4 shrink-0 text-slate-400" aria-label="Pessoa física" />
                                           ) : (
-                                            <BuildingOfficeIcon className="h-4 w-4 text-gray-400 mr-2" />
+                                            <BuildingOfficeIcon className="h-4 w-4 shrink-0 text-slate-400" aria-label="Pessoa jurídica" />
                                           )}
-                                          <span className="text-gray-900 font-medium">{row.counterpart}</span>
+                                          <span className="font-medium text-slate-900">{row.counterpart}</span>
                                         </div>
                                       </td>
-                                      <td className="px-4 py-3 text-gray-600 max-w-xs truncate">
+                                      <td className="max-w-xs truncate px-4 py-3 text-slate-500">
                                         {row.descricao || 'Descrição não informada'}
                                       </td>
-                                      <td className="px-4 py-3 text-right font-semibold">
-                                        <div className="flex items-center justify-end">
-                                          <span className={`${accent.text} mr-2`}>{formatCurrency(row.valor)}</span>
-                                          {isRowExpanded ? (
-                                            <ChevronUpIcon className="h-4 w-4 text-gray-400" />
-                                          ) : (
-                                            <ChevronDownIcon className="h-4 w-4 text-gray-400" />
-                                          )}
+                                      <td className="whitespace-nowrap px-4 py-3 text-right font-semibold">
+                                        <div className="flex items-center justify-end gap-2">
+                                          <span className={`tabular-nums ${accent.text}`}>{formatCurrency(row.valor)}</span>
+                                          <ChevronDownIcon className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isRowExpanded ? 'rotate-180' : ''}`} aria-hidden="true" />
                                         </div>
                                       </td>
                                     </tr>
                                     {isRowExpanded && (
                                       <tr>
-                                        <td colSpan={4} className={`px-4 py-3 bg-gray-50 border-l-4 ${accent.border}`}>
-                                          <div className="space-y-3">
-                                            <h4 className="font-semibold text-gray-900 mb-3">{kind.detailsTitle}</h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                                              {row.details.map(detail => (
-                                                <div key={detail.label}>
-                                                  <span className="text-gray-600 font-medium">{detail.label}:</span>
-                                                  <span className="ml-2 text-gray-900">{detail.value}</span>
-                                                </div>
-                                              ))}
-                                            </div>
-                                            {row.descricao && (
-                                              <div className="mt-3 pt-3 border-t border-gray-200">
-                                                <span className="text-gray-600 font-medium">Descrição Completa:</span>
-                                                <p className="ml-2 text-gray-900 mt-1">{row.descricao}</p>
+                                        <td colSpan={4} className={`border-l-4 bg-slate-50 px-4 py-4 ${accent.border}`}>
+                                          <h4 className="mb-3 text-sm font-semibold text-slate-900">{kind.detailsTitle}</h4>
+                                          <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm md:grid-cols-2">
+                                            {row.details.map(detail => (
+                                              <div key={detail.label} className="flex gap-2">
+                                                <dt className="shrink-0 font-medium text-slate-500">{detail.label}:</dt>
+                                                <dd className="break-words text-slate-900">{detail.value}</dd>
                                               </div>
-                                            )}
-                                          </div>
+                                            ))}
+                                          </dl>
+                                          {row.descricao && (
+                                            <div className="mt-3 border-t border-slate-200 pt-3 text-sm">
+                                              <span className="font-medium text-slate-500">Descrição completa</span>
+                                              <p className="mt-1 text-slate-900">{row.descricao}</p>
+                                            </div>
+                                          )}
                                         </td>
                                       </tr>
                                     )}
@@ -258,17 +254,18 @@ const FinanceSection: React.FC<FinanceSectionProps> = ({ idCandidato, kind, summ
                       )}
 
                       {state.loading && (
-                        <div className="flex items-center justify-center h-16">
-                          <div className={`animate-spin rounded-full h-6 w-6 border-4 ${accent.spinner} border-t-transparent`}></div>
+                        <div className="flex h-16 items-center justify-center">
+                          <Spinner colorClassName={accent.spinner} />
                         </div>
                       )}
 
                       {state.error && !state.loading && (
-                        <div className="p-4 text-center text-sm text-gray-600">
+                        <div className="p-4 text-center text-sm text-slate-600">
                           Não foi possível carregar os itens.{' '}
                           <button
+                            type="button"
                             onClick={() => void loadPage(ano, Math.max(state.page, 0) + 1)}
-                            className="underline text-gray-900"
+                            className="font-medium text-slate-900 underline"
                           >
                             Tentar novamente
                           </button>
@@ -276,10 +273,11 @@ const FinanceSection: React.FC<FinanceSectionProps> = ({ idCandidato, kind, summ
                       )}
 
                       {!state.loading && !state.error && remaining > 0 && state.page > 0 && (
-                        <div className="p-4 border-t border-gray-200 bg-gray-50 text-center">
+                        <div className="border-t border-slate-100 bg-slate-50/60 p-4 text-center">
                           <button
+                            type="button"
                             onClick={() => void loadPage(ano, state.page + 1)}
-                            className={`px-4 py-2 ${accent.button} text-white rounded-lg transition-colors font-medium`}
+                            className={`rounded-full px-5 py-2 text-sm font-medium text-white shadow-sm transition-colors ${accent.button}`}
                           >
                             Carregar mais {Math.min(PAGE_SIZE, remaining)} itens ({remaining} restantes)
                           </button>

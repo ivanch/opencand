@@ -1,7 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  ArrowTrendingUpIcon,
+  BanknotesIcon,
+  BuildingLibraryIcon,
+  ChartBarIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ExclamationTriangleIcon,
+  MapIcon,
+  UsersIcon,
+} from '@heroicons/react/24/outline';
 import type { StatisticsData } from './statisticsRequests';
 import type { EnrichmentResponse, ValueSumResponse } from '../../api/apiStatisticsModels';
-import WhiteCard from '../../shared/WhiteCard';
+import Panel from '../../shared/Panel';
+import { LoadingBlock } from '../../shared/Spinner';
+import { formatCurrency } from '../../utils/utils';
 
 interface StatisticsGraphsProps {
   isLoading: boolean;
@@ -9,286 +23,219 @@ interface StatisticsGraphsProps {
   statisticsData: StatisticsData | null;
 }
 
+type RankingType = 'candidate' | 'party' | 'state';
+
+const RANKING_ICONS: Record<RankingType, { icon: React.ElementType; className: string }> = {
+  candidate: { icon: UsersIcon, className: 'bg-indigo-50 text-indigo-600' },
+  party: { icon: BuildingLibraryIcon, className: 'bg-violet-50 text-violet-600' },
+  state: { icon: MapIcon, className: 'bg-sky-50 text-sky-600' },
+};
+
+const RANK_BADGE = ['bg-amber-100 text-amber-700', 'bg-slate-200 text-slate-700', 'bg-orange-100 text-orange-700'];
+
+const MessagePanel: React.FC<{ icon: React.ElementType; iconClassName: string; title: string; text: string }> = ({ icon: Icon, iconClassName, title, text }) => (
+  <Panel className="flex min-h-64 items-center justify-center">
+    <div className="text-center">
+      <span className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${iconClassName}`}>
+        <Icon className="h-6 w-6" aria-hidden="true" />
+      </span>
+      <h3 className="mb-1 text-lg font-semibold text-slate-900">{title}</h3>
+      <p className="text-slate-500">{text}</p>
+    </div>
+  </Panel>
+);
+
+const EnrichmentCard: React.FC<{ title: string; data: ReadonlyArray<EnrichmentResponse> }> = ({ title, data }) => {
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+
+  // New results (e.g. after changing the filters) may have fewer items: start over from the first one
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [data]);
+
+  const index = Math.min(currentIndex, data.length - 1);
+  const enrichmentData = data[index];
+  const hasMultipleItems = data.length > 1;
+  const isGain = enrichmentData.enriquecimento >= 0;
+
+  const navButton = 'inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent';
+
+  return (
+    <Panel
+      title={title}
+      icon={ArrowTrendingUpIcon}
+      iconClassName="bg-emerald-50 text-emerald-600"
+      fullHeight
+      actions={hasMultipleItems ? (
+        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500 tabular-nums">
+          {index + 1} de {data.length}
+        </span>
+      ) : undefined}
+    >
+      <div className="flex flex-1 flex-col">
+        <Link
+          to={`/candidato/${enrichmentData.idCandidato}`}
+          className="mb-4 block break-words text-lg font-semibold text-slate-900 transition-colors hover:text-indigo-600"
+        >
+          {enrichmentData.nome}
+        </Link>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-inset ring-slate-100">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Patrimônio {enrichmentData.anoInicial}</p>
+            <p className="mt-1 font-semibold text-slate-900 tabular-nums">{formatCurrency(enrichmentData.patrimonioInicial)}</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-inset ring-slate-100">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Patrimônio {enrichmentData.anoFinal}</p>
+            <p className="mt-1 font-semibold text-slate-900 tabular-nums">{formatCurrency(enrichmentData.patrimonioFinal)}</p>
+          </div>
+        </div>
+
+        <div className={`mt-3 flex items-center justify-between rounded-xl p-4 ring-1 ring-inset ${isGain ? 'bg-emerald-50/70 ring-emerald-100' : 'bg-rose-50/70 ring-rose-100'}`}>
+          <span className="text-sm font-medium text-slate-700">Enriquecimento</span>
+          <span className={`text-xl font-bold tabular-nums ${isGain ? 'text-emerald-600' : 'text-rose-600'}`}>
+            {isGain ? '+' : ''}{formatCurrency(enrichmentData.enriquecimento)}
+          </span>
+        </div>
+
+        {/* Navigation buttons */}
+        {hasMultipleItems && (
+          <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-3">
+            <button type="button" onClick={() => setCurrentIndex(index - 1)} disabled={index === 0} className={navButton}>
+              <ChevronLeftIcon className="h-4 w-4" aria-hidden="true" />
+              Anterior
+            </button>
+            <button type="button" onClick={() => setCurrentIndex(index + 1)} disabled={index === data.length - 1} className={navButton}>
+              Próximo
+              <ChevronRightIcon className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+        )}
+      </div>
+    </Panel>
+  );
+};
+
+const RankingTable: React.FC<{ title: string; data: ReadonlyArray<ValueSumResponse> | null; type: RankingType }> = ({ title, data, type }) => {
+  const { icon, className } = RANKING_ICONS[type];
+  const th = 'py-2.5 text-xs font-semibold uppercase tracking-wider text-slate-500';
+
+  return (
+    <Panel title={title} icon={icon} iconClassName={className} fullHeight>
+      {!data || data.length === 0 ? (
+        <p className="py-6 text-center text-sm text-slate-500">Nenhum dado disponível</p>
+      ) : (
+        <div className="-mx-5 overflow-x-auto md:-mx-6 custom-scrollbar">
+          <table className="w-full text-sm">
+            <thead className="border-y border-slate-100 bg-slate-50/80">
+              <tr>
+                <th className={`${th} w-12 pl-5 text-left md:pl-6`}>#</th>
+                <th className={`${th} text-left`}>
+                  {type === 'candidate' ? 'Nome' : type === 'party' ? 'Partido' : 'UF'}
+                </th>
+                <th className={`${th} px-3 text-right`}>Ano</th>
+                <th className={`${th} pr-5 text-right md:pr-6`}>Valor</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {data.slice(0, 5).map((item, index) => (
+                <tr key={`${item.idCandidato ?? item.sgpartido ?? item.siglaUf}-${item.ano}-${index}`} className="transition-colors hover:bg-slate-50">
+                  <td className="py-3 pl-5 md:pl-6">
+                    <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${RANK_BADGE[index] ?? 'bg-slate-100 text-slate-500'}`}>
+                      {index + 1}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-3 font-medium text-slate-900">
+                    {type === 'candidate' ? (
+                      <Link to={`/candidato/${item.idCandidato}`} className="transition-colors hover:text-indigo-600 hover:underline">
+                        {item.nome || 'N/A'}
+                      </Link>
+                    ) : type === 'party' ? (
+                      item.sgpartido || 'N/A'
+                    ) : (
+                      item.siglaUf || 'N/A'
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-right text-slate-500 tabular-nums">{item.ano || '—'}</td>
+                  <td className="whitespace-nowrap py-3 pr-5 text-right font-semibold text-slate-900 tabular-nums md:pr-6">
+                    {formatCurrency(item.valor)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panel>
+  );
+};
+
+const GroupHeading: React.FC<{ icon: React.ElementType; children: React.ReactNode }> = ({ icon: Icon, children }) => (
+  <h2 className="mb-3 mt-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
+    <Icon className="h-4 w-4" aria-hidden="true" />
+    {children}
+  </h2>
+);
+
 const StatisticsGraphs: React.FC<StatisticsGraphsProps> = ({
   isLoading,
   error,
   statisticsData,
 }) => {
-  const [currentEnrichmentIndex, setCurrentEnrichmentIndex] = React.useState(0);
   if (error) {
-    return (
-      <WhiteCard className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="text-red-600 text-lg mb-2">⚠️ Erro</div>
-          <p className="text-gray-700">{error}</p>
-        </div>
-      </WhiteCard>
-    );
+    return <MessagePanel icon={ExclamationTriangleIcon} iconClassName="bg-rose-50 text-rose-600" title="Erro" text={error} />;
   }
 
   if (isLoading) {
     return (
-      <WhiteCard className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-700">Carregando dados...</p>
-        </div>
-      </WhiteCard>
+      <Panel className="flex min-h-64 items-center justify-center">
+        <LoadingBlock text="Carregando dados..." />
+      </Panel>
     );
   }
 
   if (!statisticsData) {
     return (
-      <WhiteCard className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="text-gray-500 text-4xl mb-4">📊</div>
-          <h3 className="text-gray-900 text-lg mb-2">Nenhum dado encontrado</h3>
-          <p className="text-gray-700">
-            Os dados estatísticos não puderam ser carregados
-          </p>
-        </div>
-      </WhiteCard>
+      <MessagePanel
+        icon={ChartBarIcon}
+        iconClassName="bg-slate-100 text-slate-500"
+        title="Nenhum dado encontrado"
+        text="Os dados estatísticos não puderam ser carregados"
+      />
     );
   }
 
-  const renderDataTable = (title: string, data: ReadonlyArray<ValueSumResponse | EnrichmentResponse> | null, type: 'candidate' | 'party' | 'state' | 'enrichment') => {
-    if (!data || data.length === 0) {
-      return (
-        <WhiteCard>
-          <div>
-            <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-4">{title}</h3>
-            <p className="text-gray-700 text-sm md:text-base">Nenhum dado disponível</p>
-          </div>
-        </WhiteCard>
-      );
-    }
-
-    if (type === 'enrichment') {
-      const enrichmentData = data[currentEnrichmentIndex] as EnrichmentResponse; // Use current index instead of always first item
-      const hasMultipleItems = data.length > 1;
-      
-      const handleNext = () => {
-        if (currentEnrichmentIndex < data.length - 1) {
-          setCurrentEnrichmentIndex(currentEnrichmentIndex + 1);
-        }
-      };
-
-      const handleBack = () => {
-        if (currentEnrichmentIndex > 0) {
-          setCurrentEnrichmentIndex(currentEnrichmentIndex - 1);
-        }
-      };
-
-      return (
-        <WhiteCard>
-          <div className="relative">
-            <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-4">{title}</h3>
-            <div className="space-y-3 md:space-y-4">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-1 sm:space-y-0">
-                <span className="text-gray-600 text-sm md:text-base font-medium">Candidato:</span>
-                <a 
-                  href={`/candidato/${enrichmentData.idCandidato}`}
-                  className="text-gray-900 font-medium hover:text-blue-600 hover:underline transition-colors duration-200 text-sm md:text-base break-words"
-                >
-                  {enrichmentData.nome}
-                </a>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-1 sm:space-y-0">
-                <span className="text-gray-600 text-sm md:text-base">
-                  Patrimônio Inicial (<span className="text-xs text-gray-500">{enrichmentData.anoInicial}</span>):
-                </span>
-                <span className="text-gray-900 font-medium text-sm md:text-base">
-                  R$ {enrichmentData.patrimonioInicial?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0,00'}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-1 sm:space-y-0">
-                <span className="text-gray-600 text-sm md:text-base">
-                  Patrimônio Final (<span className="text-xs text-gray-500">{enrichmentData.anoFinal}</span>):
-                </span>
-                <span className="text-gray-900 font-medium text-sm md:text-base">
-                  R$ {enrichmentData.patrimonioFinal?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0,00'}
-                </span>
-              </div>
-              <div className="border-t border-gray-200 pt-3">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-1 sm:space-y-0">
-                  <span className="text-gray-600 text-sm md:text-base font-medium">Enriquecimento:</span>
-                  <span className={`font-bold text-lg md:text-xl ${
-                    enrichmentData.enriquecimento >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {enrichmentData.enriquecimento >= 0 ? '+' : ''}
-                    R$ {enrichmentData.enriquecimento?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0,00'}
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Navigation buttons */}
-            {hasMultipleItems && (
-              <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-200 space-x-2">
-                <button
-                  onClick={handleBack}
-                  disabled={currentEnrichmentIndex === 0}
-                  className={`flex items-center justify-center px-2 md:px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 flex-1 sm:flex-initial ${
-                    currentEnrichmentIndex === 0
-                      ? 'text-gray-400 cursor-not-allowed opacity-50'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 active:bg-gray-200'
-                  }`}
-                >
-                  <svg className="w-3 h-3 md:w-4 md:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  <span className="hidden sm:inline">Anterior</span>
-                  <span className="sm:hidden">←</span>
-                </button>
-                
-                <div className="text-xs text-gray-500 font-medium">
-                  {currentEnrichmentIndex + 1} de {data.length}
-                </div>
-                
-                <button
-                  onClick={handleNext}
-                  disabled={currentEnrichmentIndex === data.length - 1}
-                  className={`flex items-center justify-center px-2 md:px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 flex-1 sm:flex-initial ${
-                    currentEnrichmentIndex === data.length - 1
-                      ? 'text-gray-400 cursor-not-allowed opacity-50'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 active:bg-gray-200'
-                  }`}
-                >
-                  <span className="hidden sm:inline">Próximo</span>
-                  <span className="sm:hidden">→</span>
-                  <svg className="w-3 h-3 md:w-4 md:h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            )}
-          </div>
-        </WhiteCard>
-      );
-    }
-
-    return (
-      <WhiteCard>
-        <div>
-          <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-4">{title}</h3>
-          <div className="overflow-auto overflow-y-auto custom-scrollbar pr-2">
-            <table className="w-full text-sm md:text-base">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  {type === 'candidate' && (
-                    <>
-                      <th className="text-left py-2 text-gray-600 font-medium">Nome</th>
-                    </>
-                  )}
-                  {type === 'party' && (
-                    <th className="text-left py-2 text-gray-600 font-medium">Partido</th>
-                  )}
-                  {type === 'state' && (
-                    <th className="text-left py-2 text-gray-600 font-medium">UF</th>
-                  )}
-                  <th className="py-2 text-gray-600 font-medium">Ano</th>
-                  <th className="py-2 text-gray-600 font-medium">Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(data as ValueSumResponse[]).slice(0, 5).map((item, index) => (
-                  <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150">
-                    {type === 'candidate' && (
-                      <a href={`/candidato/${item.idCandidato}`}
-                         className="text-left w-100 text-gray-900 font-medium hover:text-blue-600 hover:underline transition-colors duration-200"
-                      >
-                        <td className="text-left w-100 py-3 text-sm md:text-base">{item.nome || 'N/A'}</td>
-                      </a>
-                    )}
-                    {type === 'party' && (
-                      <td className="py-3 text-gray-900 text-sm md:text-base text-left">{item.sgpartido || 'N/A'}</td>
-                    )}
-                    {type === 'state' && (
-                      <td className="py-3 text-gray-900 text-sm md:text-base text-left">{item.siglaUf || 'N/A'}</td>
-                    )}
-                    <td className="py-3 text-gray-900 text-sm md:text-base">{item.ano || 'N/A'}</td>
-                    <td className="py-3 font-medium text-gray-900 text-sm md:text-base">
-                      R$ {item.valor?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0,00'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </WhiteCard>
-    );
-  };
-
   return (
-    <div className="">
-      <div className="space-y-4 md:space-y-6">
-        {/* First Row - Candidates */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-          {renderDataTable(
-            'Candidatos com Maiores Bens',
-            statisticsData.candidatesWithMostAssets,
-            'candidate'
+    <div className="space-y-8">
+      <section>
+        <GroupHeading icon={UsersIcon}>Candidatos</GroupHeading>
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <RankingTable title="Maiores Bens" data={statisticsData.candidatesWithMostAssets} type="candidate" />
+          {statisticsData.enrichmentData && statisticsData.enrichmentData.length > 0 && (
+            <EnrichmentCard title="Análise de Enriquecimento" data={statisticsData.enrichmentData} />
           )}
-          {statisticsData.enrichmentData && renderDataTable(
-            'Análise de Enriquecimento',
-            statisticsData.enrichmentData,
-            'enrichment'
-          )}
+          <RankingTable title="Maiores Receitas" data={statisticsData.candidatesWithMostRevenue} type="candidate" />
+          <RankingTable title="Maiores Despesas" data={statisticsData.candidatesWithMostExpenses} type="candidate" />
         </div>
+      </section>
 
-        {/* Second Row - Candidates Revenue & Expenses */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-          {renderDataTable(
-            'Candidatos com Maiores Receitas',
-            statisticsData.candidatesWithMostRevenue,
-            'candidate'
-          )}
-          {renderDataTable(
-            'Candidatos com Maiores Despesas',
-            statisticsData.candidatesWithMostExpenses,
-            'candidate'
-          )}
+      <section>
+        <GroupHeading icon={BuildingLibraryIcon}>Partidos</GroupHeading>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 2xl:grid-cols-3">
+          <RankingTable title="Maiores Bens" data={statisticsData.partiesWithMostAssets} type="party" />
+          <RankingTable title="Maiores Despesas" data={statisticsData.partiesWithMostExpenses} type="party" />
+          <RankingTable title="Maiores Receitas" data={statisticsData.partiesWithMostRevenue} type="party" />
         </div>
+      </section>
 
-        {/* Third Row - Parties */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {renderDataTable(
-            'Partidos com Maiores Bens',
-            statisticsData.partiesWithMostAssets,
-            'party'
-          )}
-          {renderDataTable(
-            'Partidos com Maiores Despesas',
-            statisticsData.partiesWithMostExpenses,
-            'party'
-          )}
-          {renderDataTable(
-            'Partidos com Maiores Receitas',
-            statisticsData.partiesWithMostRevenue,
-            'party'
-          )}
+      <section>
+        <GroupHeading icon={BanknotesIcon}>Unidades Federativas</GroupHeading>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 2xl:grid-cols-3">
+          <RankingTable title="Maiores Bens" data={statisticsData.statesWithMostAssets} type="state" />
+          <RankingTable title="Maiores Despesas" data={statisticsData.statesWithMostExpenses} type="state" />
+          <RankingTable title="Maiores Receitas" data={statisticsData.statesWithMostRevenue} type="state" />
         </div>
-
-        {/* Fourth Row - States */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {renderDataTable(
-            'UFs com Maiores Bens',
-            statisticsData.statesWithMostAssets,
-            'state'
-          )}
-          {renderDataTable(
-            'UFs com Maiores Despesas',
-            statisticsData.statesWithMostExpenses,
-            'state'
-          )}
-          {renderDataTable(
-            'UFs com Maiores Receitas',
-            statisticsData.statesWithMostRevenue,
-            'state'
-          )}
-        </div>
-      </div>
+      </section>
     </div>
   );
 };

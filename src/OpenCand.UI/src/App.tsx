@@ -6,8 +6,10 @@ import StatisticsSection from './components/StatisticsSection';
 import FeaturesSection from './components/FeaturesSection';
 import Footer from './components/Footer';
 import NotFound from './components/NotFound';
-import MatrixBackground from './components/MatrixBackground';
+import AppBackground from './components/AppBackground';
 import ConsentBanner from './components/ConsentBanner';
+import { LoadingBlock } from './shared/Spinner';
+import { usePageTitle } from './hooks/usePageTitle';
 import './App.css';
 
 // Route-level code splitting: recharts and the secondary pages stay out of the main bundle
@@ -18,19 +20,17 @@ const StatisticsPage = lazy(() => import('./components/StatisticsPage/Statistics
 const SobrePage = lazy(() => import('./components/SobrePage'));
 
 const RouteFallback: React.FC = () => (
-  <div className="flex items-center justify-center py-32" role="status" aria-label="Carregando">
-    <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-400 border-t-transparent"></div>
-  </div>
+  <LoadingBlock heightClassName="py-32" colorClassName="border-indigo-400" />
 );
 
 // HomePage component
 const HomePage: React.FC = () => {
+  usePageTitle(null);
+
   return (
     <main className="flex-grow">
       <HeroSection />
-      <div className="w-32 h-1 bg-gradient-to-r from-indigo-400 to-purple-400 mx-auto mt-12 rounded-full"></div>
       <StatisticsSection />
-      <div className="w-32 h-1 bg-gradient-to-r from-indigo-400 to-purple-400 mx-auto mt-6 rounded-full"></div>
       <FeaturesSection />
     </main>
   );
@@ -39,6 +39,7 @@ const HomePage: React.FC = () => {
 function App() {
   const location = useLocation();
 
+  // Hash links scroll to their section; any other navigation starts at the top of the new page
   useEffect(() => {
     const segment = location.hash;
     if (segment) {
@@ -46,14 +47,16 @@ function App() {
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
+    } else {
+      window.scrollTo({ top: 0 });
     }
-  }, [location]);
+  }, [location.pathname, location.hash]);
 
   return (
-    <div className="min-h-screen w-full flex flex-col relative" style={{ backgroundColor: 'transparent' }}>
-      <MatrixBackground />
+    <div className="relative isolate flex min-h-screen w-full flex-col">
+      <AppBackground />
       <Navbar />
-      <div className="relative z-10 flex-1 flex flex-col">
+      <div className="relative z-10 flex flex-1 flex-col">
         <div className="flex-1">
           <Suspense fallback={<RouteFallback />}>
             <Routes>

@@ -156,7 +156,7 @@ namespace OpenCand.API
                 if (proxies.Length > 0 || networks.Length > 0)
                 {
                     options.KnownProxies.Clear();
-                    options.KnownNetworks.Clear();
+                    options.KnownIPNetworks.Clear();
                 }
 
                 foreach (var proxy in proxies)
@@ -166,9 +166,7 @@ namespace OpenCand.API
 
                 foreach (var network in networks)
                 {
-                    var parts = network.Split('/');
-                    options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(
-                        IPAddress.Parse(parts[0]), int.Parse(parts[1])));
+                    options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
                 }
             });
         }

@@ -1,36 +1,24 @@
 import React, { useState, useMemo } from 'react';
-import { CurrencyDollarIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ArrowDownRightIcon, ArrowUpRightIcon, ChevronDownIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { type Asset } from '../../api';
+import Panel from '../../shared/Panel';
+import { LoadingBlock } from '../../shared/Spinner';
+import { formatCurrency, formatCurrencyCompact } from '../../utils/utils';
 
 interface AssetsComponentProps {
   assets: Asset[] | null;
   isLoading: boolean;
 }
 
+const sumValues = (items: Asset[]) => items.reduce((total, asset) => total + asset.valor, 0);
+
 const AssetsComponent: React.FC<AssetsComponentProps> = ({ assets, isLoading }) => {
   const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
 
-  const formatCurrencyCompact = (value: number) => {
-    if (value >= 1000000) {
-      return `R$ ${(value / 1000000).toFixed(1)}M`;
-    } else if (value >= 1000) {
-      return `R$ ${(value / 1000).toFixed(0)}K`;
-    } else {
-      return `R$ ${value.toFixed(0)}`;
-    }
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-
   const groupedAssets = useMemo(() => {
     if (!assets) return {};
-    
+
     return assets.reduce((acc, asset) => {
       const year = asset.ano;
       if (!acc[year]) {
@@ -45,6 +33,11 @@ const AssetsComponent: React.FC<AssetsComponentProps> = ({ assets, isLoading }) 
     return Object.keys(groupedAssets).map(Number).sort((a, b) => b - a);
   }, [groupedAssets]);
 
+  const chartData = useMemo(
+    () => [...sortedYears].reverse().map(year => ({ year, valor: sumValues(groupedAssets[year]) })),
+    [sortedYears, groupedAssets]
+  );
+
   const toggleYear = (year: number) => {
     setExpandedYears(prev => {
       const newSet = new Set(prev);
@@ -57,180 +50,157 @@ const AssetsComponent: React.FC<AssetsComponentProps> = ({ assets, isLoading }) 
     });
   };
 
-  const getTotalForYear = (yearAssets: Asset[]) => {
-    return yearAssets.reduce((total, asset) => total + asset.valor, 0);
-  };
-
-  const getTotalAssets = () => {
-    if (!assets) return 0;
-    return assets.reduce((total, asset) => total + asset.valor, 0);
-  };
+  // Latest declared total and how it changed since the first declaration
+  const latestTotal = chartData.length > 0 ? chartData[chartData.length - 1].valor : 0;
+  const firstTotal = chartData.length > 0 ? chartData[0].valor : 0;
+  const variation = latestTotal - firstTotal;
+  const variationPercent = firstTotal > 0 ? (variation / firstTotal) * 100 : null;
+  const variationClass = variation > 0 ? 'text-emerald-600' : variation < 0 ? 'text-rose-600' : 'text-slate-500';
+  const VariationIcon = variation >= 0 ? ArrowUpRightIcon : ArrowDownRightIcon;
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] transition-all duration-200 p-6">
-      <div className="flex items-center mb-6">
-        <CurrencyDollarIcon className="h-8 w-8 text-purple-600 mr-3" />
-        <h2 className="text-2xl font-bold text-gray-900">Patrimônio Declarado</h2>
-      </div>
-
+    <Panel title="Patrimônio Declarado" icon={CurrencyDollarIcon} iconClassName="bg-violet-50 text-violet-600">
       {isLoading ? (
-        <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-4 border-purple-600 border-t-transparent"></div>
-        </div>
+        <LoadingBlock colorClassName="border-violet-600" />
       ) : assets && assets.length > 0 ? (
         <>
-          <div className="space-y-4">
+          {/* Summary */}
+          <div className="mb-5 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl bg-violet-50/70 p-4 ring-1 ring-inset ring-violet-100">
+              <p className="text-xs font-medium uppercase tracking-wider text-violet-700/80">
+                Última declaração ({sortedYears[0]})
+              </p>
+              <p className="mt-1 text-2xl font-bold text-slate-900 tabular-nums">{formatCurrency(latestTotal)}</p>
+            </div>
+            {sortedYears.length > 1 && (
+              <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-inset ring-slate-100">
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                  Variação desde {sortedYears[sortedYears.length - 1]}
+                </p>
+                <p className={`mt-1 flex items-center gap-1.5 text-2xl font-bold tabular-nums ${variationClass}`}>
+                  {variation !== 0 && <VariationIcon className="h-5 w-5" aria-hidden="true" />}
+                  {variation > 0 ? '+' : ''}{formatCurrency(variation)}
+                  {variationPercent !== null && variation !== 0 && (
+                    <span className="text-sm font-semibold">
+                      ({variation > 0 ? '+' : ''}{variationPercent.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%)
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Assets Progression Graph */}
+          {sortedYears.length > 1 && (
+            <div className="mb-6 rounded-xl ring-1 ring-inset ring-slate-100 p-3 pt-5">
+              <h3 className="mb-2 px-2 text-sm font-semibold text-slate-700">Evolução Patrimonial Declarada</h3>
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="assetsFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="#7c3aed" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
+                  <XAxis dataKey="year" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis
+                    stroke="#94a3b8"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => formatCurrencyCompact(value)}
+                    width={80}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#ffffff',
+                      color: '#334155',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px -10px rgba(15, 23, 42, 0.25)',
+                    }}
+                    formatter={(value: number) => [formatCurrency(value), 'Patrimônio']}
+                    labelStyle={{ color: '#0f172a', fontWeight: 600 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="valor"
+                    stroke="#7c3aed"
+                    strokeWidth={2.5}
+                    fill="url(#assetsFill)"
+                    dot={{ fill: '#ffffff', stroke: '#7c3aed', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, fill: '#7c3aed', stroke: '#ffffff', strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Declarations per year */}
+          <div className="space-y-2.5">
             {sortedYears.map((year) => {
               const yearAssets = groupedAssets[year];
               const isExpanded = expandedYears.has(year);
-              
+
               return (
-                <div key={year} className="border border-gray-200 rounded-lg overflow-hidden">
-                  {/* Year Header - Clickable */}
+                <div key={year} className="overflow-hidden rounded-xl ring-1 ring-inset ring-slate-200">
                   <button
+                    type="button"
                     onClick={() => toggleYear(year)}
-                    className="w-full px-4 py-4 bg-gray-50 hover:bg-gray-100 transition-colors duration-200 flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-inset"
+                    aria-expanded={isExpanded}
+                    className={`flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors ${isExpanded ? 'bg-slate-50' : 'hover:bg-slate-50'}`}
                   >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-lg font-semibold text-gray-900">{year}</span>
-                      <span className="text-sm text-gray-600">
-                        ({yearAssets.length} {yearAssets.length === 1 ? 'item' : 'itens'})
+                    <div className="flex items-center gap-3">
+                      <span className="text-base font-semibold text-slate-900 tabular-nums">{year}</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                        {yearAssets.length} {yearAssets.length === 1 ? 'item' : 'itens'}
                       </span>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <span className="text-lg font-bold text-purple-600">
-                        {formatCurrency(getTotalForYear(yearAssets))}
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-violet-700 tabular-nums">
+                        {formatCurrency(sumValues(yearAssets))}
                       </span>
-                      {isExpanded ? (
-                        <ChevronUpIcon className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                      ) : (
-                        <ChevronDownIcon className="h-5 w-5 text-gray-500 transition-transform duration-200" />
-                      )}
+                      <ChevronDownIcon className={`h-5 w-5 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} aria-hidden="true" />
                     </div>
                   </button>
-                  
-                  {/* Assets Table - Collapsible */}
+
                   {isExpanded && (
-                    <div className="bg-white animate-fadeIn">
-                      <div className="overflow-x-auto">
-                        <table className="w-full table-auto">
-                          <thead>
-                            <tr className="border-b border-gray-200 bg-gray-50">
-                              <th className="text-left py-3 px-4 font-semibold text-gray-700">Tipo</th>
-                              <th className="text-left py-3 px-4 font-semibold text-gray-700">Descrição</th>
-                              <th className="text-right py-3 px-4 font-semibold text-gray-700">Valor</th>
+                    <div className="overflow-x-auto border-t border-slate-100 animate-fadeIn custom-scrollbar">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50/60">
+                          <tr>
+                            <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Tipo</th>
+                            <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Descrição</th>
+                            <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Valor</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {yearAssets.map((asset: Asset, index: number) => (
+                            <tr
+                              key={`${asset.idCandidato}-${asset.ano}-${index}`}
+                              className="transition-colors hover:bg-slate-50"
+                            >
+                              <td className="px-4 py-3 font-medium text-slate-900">{asset.tipoBem}</td>
+                              <td className="px-4 py-3 text-slate-600">{asset.descricao}</td>
+                              <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-slate-900 tabular-nums">
+                                {formatCurrency(asset.valor)}
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody>
-                            {yearAssets.map((asset: Asset, index: number) => (
-                              <tr 
-                                key={`${asset.idCandidato}-${asset.ano}-${index}`} 
-                                className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150"
-                              >
-                                <td className="py-3 px-4 text-gray-900">{asset.tipoBem}</td>
-                                <td className="py-3 px-4 text-gray-900">{asset.descricao}</td>
-                                <td className="py-3 px-4 text-right text-gray-900 font-medium">
-                                  {formatCurrency(asset.valor)}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
-           {/* Assets Progression Graph */}
-          {sortedYears.length > 1 && (
-            <div className="mt-6 pt-6 border-t-2 border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Evolução Patrimonial Declarada</h3>
-              <div className="bg-gradient-to-br from-purple-50 to-green-50 p-6 rounded-lg shadow-inner">
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart
-                    data={sortedYears.map(year => ({
-                      year,
-                      valor: getTotalForYear(groupedAssets[year])
-                    })).sort((a, b) => a.year - b.year)}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 0,
-                      bottom: 20,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis 
-                      dataKey="year" 
-                      stroke="#6b7280"
-                      fontSize={12}
-                      fontWeight={500}
-                    />
-                    <YAxis 
-                      stroke="#6b7280"
-                      fontSize={12}
-                      fontWeight={500}
-                      tickFormatter={(value) => formatCurrencyCompact(value)}
-                      width={75}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#fefefe',
-                        color: '#374151',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                      }}
-                      formatter={(value: number) => [formatCurrency(value), 'Patrimônio']}
-                      labelStyle={{ color: '#374151', fontWeight: 600 }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="valor" 
-                      stroke="url(#gradient)" 
-                      strokeWidth={3}
-                      dot={{ fill: '#7c3aed', strokeWidth: 2, r: 6 }}
-                      activeDot={{ r: 8, fill: '#059669' }}
-                    />
-                    <defs>
-                      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#7c3aed" />
-                        <stop offset="100%" stopColor="#059669" />
-                      </linearGradient>
-                    </defs>
-                  </LineChart>
-                </ResponsiveContainer>
-                <div className="mt-3 text-center">
-                  <p className="text-sm text-gray-600">
-                    Variação total: {' '}
-                    <span className={`font-semibold ${
-                      sortedYears.length > 1 && 
-                      getTotalForYear(groupedAssets[Math.max(...sortedYears)]) > 
-                      getTotalForYear(groupedAssets[Math.min(...sortedYears)])
-                        ? 'text-green-600' 
-                        : 'text-red-600'
-                    }`}>
-                      {sortedYears.length > 1 && 
-                        formatCurrency(
-                          getTotalForYear(groupedAssets[Math.max(...sortedYears)]) - 
-                          getTotalForYear(groupedAssets[Math.min(...sortedYears)])
-                        )
-                      }
-                    </span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </>
       ) : (
-        <div className="text-center text-gray-500 py-8">
-          Nenhum patrimônio declarado encontrado
-        </div>
+        <p className="py-8 text-center text-slate-500">Nenhum patrimônio declarado encontrado</p>
       )}
-    </div>
+    </Panel>
   );
 };
 

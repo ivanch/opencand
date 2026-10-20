@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+﻿using System.Collections.Concurrent;
+using Microsoft.Extensions.Caching.Memory;
 using Npgsql;
 
 namespace OpenCand.Repository
@@ -14,6 +15,9 @@ namespace OpenCand.Repository
         public static readonly TimeSpan DefaultCacheExpiration = TimeSpan.FromHours(6);
         public static readonly TimeSpan SearchCacheExpiration = TimeSpan.FromMinutes(10);
         protected static readonly CacheItemPriority DefaultCachePriority = CacheItemPriority.Normal;
+
+        // Cache misses currently being loaded, by cache key, so concurrent callers share one query instead of each running it.
+        private static readonly ConcurrentDictionary<string, Lazy<Task<object?>>> InFlight = new();
 
         public BaseRepository(IConfiguration configuration, IMemoryCache? cache = null)
         {
@@ -49,21 +53,34 @@ namespace OpenCand.Repository
                 return cachedData;
             }
 
-            // If not in cache, execute factory function
-            var result = await factory();
-            
-            // Only cache non-null results
-            if (result != null)
+            // If not in cache, execute factory function (once, shared with concurrent callers for the same key)
+            var cache = _cache;
+            var load = InFlight.GetOrAdd(cacheKey, key => new Lazy<Task<object?>>(async () =>
             {
-                _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
+                try
                 {
-                    AbsoluteExpirationRelativeToNow = expiration ?? DefaultCacheExpiration,
-                    Priority = priority ?? DefaultCachePriority,
-                    Size = 1
-                });
-            }
+                    var result = await factory();
 
-            return result;
+                    // Only cache non-null results
+                    if (result != null)
+                    {
+                        cache.Set(cacheKey, result, new MemoryCacheEntryOptions
+                        {
+                            AbsoluteExpirationRelativeToNow = expiration ?? DefaultCacheExpiration,
+                            Priority = priority ?? DefaultCachePriority,
+                            Size = 1
+                        });
+                    }
+
+                    return result;
+                }
+                finally
+                {
+                    InFlight.TryRemove(key, out _);
+                }
+            }));
+
+            return await load.Value as T;
         }
 
         /// <summary>

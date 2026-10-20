@@ -61,3 +61,44 @@ export function formatDateToDDMMYYYY(date: Date | string | number | null | undef
 
     return `${day}/${month}/${year}`;
 }
+
+const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const compactCurrencyFormatter = new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    notation: 'compact',
+    maximumFractionDigits: 1,
+});
+const compactNumberFormatter = new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 });
+
+/** R$ 1.234,56 */
+export function formatCurrency(value: number | null | undefined): string {
+    return currencyFormatter.format(value ?? 0);
+}
+
+/** R$ 1,2 mi — for chart axes and summary tiles */
+export function formatCurrencyCompact(value: number | null | undefined): string {
+    return compactCurrencyFormatter.format(value ?? 0);
+}
+
+/** 1,2 mi / 350 mil */
+export function formatCompactNumber(value: number | null | undefined): string {
+    return compactNumberFormatter.format(value ?? 0);
+}
+
+/** Sizes in bytes as MB / GB */
+export function formatBytes(sizeInBytes: number): string {
+    const sizeMB = sizeInBytes / 1024 / 1024;
+    return sizeMB > 1024
+        ? `${(sizeMB / 1024).toFixed(2)} GB`
+        : `${sizeMB.toFixed(2)} MB`;
+}
+
+/** Up to two initials of a name, for avatar placeholders */
+export function getInitials(name: string | null | undefined): string {
+    const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    const first = parts[0][0];
+    const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+    return `${first}${last}`.toUpperCase();
+}

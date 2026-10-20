@@ -36,14 +36,33 @@ public class QueryBuilderMvTests
     }
 
     [Fact]
-    public void BuildQuery_GroupByCandidato_JoinsCandidatoOnlyForTheName()
+    public void BuildQuery_GroupByCandidato_JoinsCandidatoOnlyForTheTopTen()
     {
-        var sql = new EstatisticaService.SqlQueryBuilder().BuildQuery(Request(groupBy: "candidato"));
+        var sql = new EstatisticaService.SqlQueryBuilder().BuildQuery(Request(groupBy: "candidato", filter: AllFilters));
 
-        Assert.Contains("JOIN candidato c ON c.idcandidato = src.idcandidato", sql);
-        Assert.Contains("SELECT src.idcandidato, c.nome, src.ano, SUM(src.valor)", sql);
-        Assert.Contains("GROUP BY src.idcandidato, c.nome, src.ano", sql);
+        // aggregate + LIMIT inside the subquery, the join to candidato only outside it
+        var inner = sql[sql.IndexOf("(SELECT", StringComparison.Ordinal)..(sql.IndexOf(") t ", StringComparison.Ordinal) + 1)];
+        Assert.Contains("SELECT src.idcandidato, src.ano, SUM(src.valor)", inner);
+        Assert.Contains("FROM mv_bem_candidato src WHERE", inner);
+        Assert.Contains("GROUP BY src.idcandidato, src.ano", inner);
+        Assert.EndsWith("LIMIT 10)", inner);
+        Assert.DoesNotContain("JOIN", inner);
+
+        Assert.StartsWith("SELECT t.idcandidato, c.nome, t.ano, t.valor FROM (", sql);
+        Assert.EndsWith("JOIN candidato c ON c.idcandidato = t.idcandidato ORDER BY t.valor DESC", sql);
         Assert.Equal(1, CountOccurrences(sql, "JOIN"));
+    }
+
+    [Theory]
+    [InlineData("bem", "partido", "mv_bem_resumo")]
+    [InlineData("despesa", "uf", "mv_despesas_resumo")]
+    [InlineData("receita", "cargo", "mv_receitas_resumo")]
+    public void BuildQuery_GroupByDimension_UsesTheRollupView(string type, string groupBy, string expectedView)
+    {
+        var sql = new EstatisticaService.SqlQueryBuilder().BuildQuery(Request(type: type, groupBy: groupBy, filter: AllFilters));
+
+        Assert.Contains($"FROM {expectedView} src WHERE", sql);
+        Assert.DoesNotContain("_candidato", sql);
     }
 
     [Theory]

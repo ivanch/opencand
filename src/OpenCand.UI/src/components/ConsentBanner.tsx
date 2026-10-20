@@ -40,7 +40,7 @@ const ConsentBanner: React.FC = () => {
       aria-label="Preferências de privacidade"
       className="fixed bottom-0 inset-x-0 z-50 p-4"
     >
-      <div className="max-w-3xl mx-auto bg-gray-900/95 backdrop-blur-sm text-gray-200 rounded-xl shadow-2xl ring-1 ring-white/10 p-4 flex flex-col sm:flex-row sm:items-center gap-4 text-left">
+      <div className="max-w-3xl mx-auto bg-surface-900/95 backdrop-blur-xl text-slate-200 rounded-2xl shadow-2xl shadow-black/40 ring-1 ring-white/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4 text-left animate-fade-in-up">
         <p className="text-sm flex-1">
           Usamos o Google Analytics (via Firebase) para entender como o site é usado. Os dados só são coletados se você permitir.
         </p>
@@ -48,14 +48,14 @@ const ConsentBanner: React.FC = () => {
           <button
             type="button"
             onClick={() => choose('denied')}
-            className="px-4 py-2 rounded-lg text-sm bg-white/10 hover:bg-white/20 transition-colors"
+            className="px-4 py-2 rounded-full text-sm font-medium bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
           >
             Recusar
           </button>
           <button
             type="button"
             onClick={() => choose('granted')}
-            className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-500 hover:bg-indigo-600 text-white transition-colors"
+            className="px-4 py-2 rounded-full text-sm font-semibold bg-indigo-500 hover:bg-indigo-400 text-white transition-colors cursor-pointer"
           >
             Aceitar
           </button>
