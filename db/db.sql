@@ -83,6 +83,7 @@ CREATE TABLE bem_candidato (
 );
 ALTER TABLE bem_candidato ADD CONSTRAINT pk_bem_candidato PRIMARY KEY (idcandidato, ano, ordembem);
 CREATE INDEX idx_bem_candidato_valor ON bem_candidato (valor);
+CREATE INDEX idx_bem_candidato_ano ON bem_candidato (ano);
 
 CREATE TABLE rede_social (
     idcandidato UUID NOT NULL,
@@ -93,6 +94,7 @@ CREATE TABLE rede_social (
     CONSTRAINT pk_rede_social PRIMARY KEY (idcandidato, ano, link),
     CONSTRAINT fk_rede_social_candidato FOREIGN KEY (idcandidato) REFERENCES candidato(idcandidato) ON DELETE CASCADE ON UPDATE CASCADE
 );
+CREATE INDEX idx_rede_social_ano ON rede_social (ano);
 
 CREATE TABLE partido (
     sigla VARCHAR(50) NOT NULL PRIMARY KEY,

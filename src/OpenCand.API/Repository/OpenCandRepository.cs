@@ -61,6 +61,21 @@ namespace OpenCand.API.Repository
             return result ?? new OpenCandStats();
         }
         
+        /// <summary>
+        /// Distinct years of a table, newest first. A plain SELECT DISTINCT reads every row (tens of millions in the
+        /// despesas/receitas tables, beyond the command timeout); this recursive query jumps from year to year through
+        /// the table's index on ano instead, one index lookup per year.
+        /// </summary>
+        internal static string DistinctYearsSql(string table) => $@"
+            WITH RECURSIVE anos AS (
+                (SELECT ano FROM {table} ORDER BY ano DESC LIMIT 1)
+                UNION ALL
+                SELECT (SELECT t.ano FROM {table} t WHERE t.ano < anos.ano ORDER BY t.ano DESC LIMIT 1)
+                FROM anos
+                WHERE anos.ano IS NOT NULL
+            )
+            SELECT ano FROM anos WHERE ano IS NOT NULL;";
+
         public async Task<DataAvailabilityStats> GetDataAvailabilityAsync()
         {
             string cacheKey = GenerateCacheKey("DataAvailabilityStats");
@@ -72,11 +87,11 @@ namespace OpenCand.API.Repository
                     var stats = new DataAvailabilityStats();
 
                     // Get years for each data type separately
-                    var candidatosYears = await connection.QueryAsync<int>("SELECT DISTINCT ano FROM candidato_mapping ORDER BY ano DESC");
-                    var bemCandidatosYears = await connection.QueryAsync<int>("SELECT DISTINCT ano FROM bem_candidato ORDER BY ano DESC");
-                    var despesaCandidatosYears = await connection.QueryAsync<int>("SELECT DISTINCT ano FROM despesas_candidato ORDER BY ano DESC");
-                    var receitaCandidatosYears = await connection.QueryAsync<int>("SELECT DISTINCT ano FROM receitas_candidato ORDER BY ano DESC");
-                    var redeSocialCandidatosYears = await connection.QueryAsync<int>("SELECT DISTINCT ano FROM rede_social ORDER BY ano DESC");
+                    var candidatosYears = await connection.QueryAsync<int>(DistinctYearsSql("candidato_mapping"));
+                    var bemCandidatosYears = await connection.QueryAsync<int>(DistinctYearsSql("bem_candidato"));
+                    var despesaCandidatosYears = await connection.QueryAsync<int>(DistinctYearsSql("despesas_candidato"));
+                    var receitaCandidatosYears = await connection.QueryAsync<int>(DistinctYearsSql("receitas_candidato"));
+                    var redeSocialCandidatosYears = await connection.QueryAsync<int>(DistinctYearsSql("rede_social"));
 
                     stats.Candidatos = candidatosYears.ToList();
                     stats.BemCandidatos = bemCandidatosYears.ToList();
